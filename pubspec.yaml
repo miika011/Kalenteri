@@ -37,6 +37,7 @@ dependencies:
   sticky_infinite_list: ^4.0.1
   loop_page_view: ^1.1.1
   infinite_listview: ^1.1.0
+  intl: ^0.17.0
 
 dev_dependencies:
   flutter_test:

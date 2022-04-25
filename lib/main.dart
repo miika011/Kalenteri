@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:infinite_listview/infinite_listview.dart';
 import 'package:kalenteri/util.dart';
-/*
-mport 'dart:ffi';
-import 'util.dart';
-import 'package:sticky_infinite_list/sticky_infinite_list.dart';
-import 'package:loop_page_view/loop_page_view.dart';
-*/
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -17,6 +12,17 @@ void main() {
 }
 
 const mauno = Image(image: AssetImage("assets/images/mauno.png"));
+final List<ActivityEntry> testActivities = [
+  ActivityEntry(Activity(label: "Eka", timeStamp: DateTime.now())),
+  ActivityEntry(Activity(label: "Toka", timeStamp: DateTime.now())),
+  ActivityEntry(Activity(
+      label: "Kolmas (Mauno)",
+      timeStamp: DateTime.now(),
+      imagePath: "assets/images/mauno.png")),
+  ActivityEntry(
+    Activity(label: "Neljäs", timeStamp: DateTime.now()),
+  )
+];
 
 class WeekView extends StatefulWidget {
   const WeekView({Key? key}) : super(key: key);
@@ -26,10 +32,11 @@ class WeekView extends StatefulWidget {
 }
 
 class _WeekViewState extends State<WeekView> {
+  DateTime? highlightedDate;
   @override
   Widget build(BuildContext context) {
     final availableSize = MediaQuery.of(context).size;
-    final dayWidgetWidth = availableSize.width / _daysInAWeek;
+    final dayWidgetWidth = availableSize.width / DateTime.daysPerWeek;
 
     goFullscreen();
 
@@ -37,72 +44,87 @@ class _WeekViewState extends State<WeekView> {
       itemBuilder: (BuildContext context, int index) {
         final now = DateTime.now();
         final fromNowToWeeksMonday = Duration(
-            days: -now.weekday + 1); //DateTime weekdays are 1..7 hence +1
+            days: -now.weekday + 1); //DateTime weekdays are 1..7 hence the +1
         final weeksMonday = now.add(fromNowToWeeksMonday);
+        final dayToRender = weeksMonday.add(Duration(days: index));
 
-        return SizedBox(
-            width: dayWidgetWidth,
-            child: DayView(date: weeksMonday.add(Duration(days: index))));
+        return GestureDetector(
+            onTap: () => setState(() {
+                  highlightedDate = dayToRender;
+                }),
+            child: SizedBox(
+              width: dayWidgetWidth,
+              child: viewFor(dayToRender),
+            ));
       },
       scrollDirection: Axis.horizontal,
       controller: InfiniteScrollController(initialScrollOffset: 0),
     );
   }
 
-  List<Widget> get dayWidgets {
-    return List<DayView>.generate(_daysInAWeek, (index) {
-      final now = DateTime.now();
-      final Duration fromNowToWeeksMonday = Duration(
-          days: -now.weekday + 1); //DateTime weekdays are 1..7 hence +1
-      final weeksMonday = now.add(fromNowToWeeksMonday);
-      return DayView(
-        date: weeksMonday.add(Duration(days: index)),
-      );
-    });
+  Widget viewFor(DateTime time) {
+    final EdgeInsets margin;
+    final BoxDecoration decoration;
+    if (_isHighlighted(time)) {
+      margin = const EdgeInsets.only(left: 8.5, right: 8.5);
+      decoration = _highlightedDecoration;
+    } else {
+      margin = const EdgeInsets.only(left: 0.5, right: 0.5);
+      decoration = _normalDecoration;
+    }
+    return Container(
+      child: DayView(
+        date: time,
+      ),
+      margin: margin,
+      decoration: decoration,
+    );
+  }
+
+  bool _isHighlighted(DateTime date) {
+    return highlightedDate != null && highlightedDate!.isSameDayAs(date);
+  }
+
+  BoxDecoration get _highlightedDecoration {
+    return BoxDecoration(boxShadow: [
+      BoxShadow(
+          spreadRadius: 8.5,
+          blurRadius: 8.5,
+          //blurStyle: BlurStyle.inner,
+          color: Colors.blueGrey.shade300),
+    ]);
+  }
+
+  BoxDecoration get _normalDecoration {
+    const BorderSide borderSide = BorderSide(color: Colors.black);
+    return const BoxDecoration(
+        border: Border(left: borderSide, right: borderSide));
   }
 }
 
 class DayView extends StatefulWidget {
-  DayView({Key? key, required this.date}) : super(key: key);
+  const DayView({Key? key, required this.date}) : super(key: key);
   final DateTime date;
-
-  final List<ActivityEntry> activities = [
-    ActivityEntry(Activity(label: "Eka", timeStamp: DateTime.now())),
-    ActivityEntry(Activity(label: "Toka", timeStamp: DateTime.now())),
-    ActivityEntry(Activity(
-        label: "Kolmas (Mauno)",
-        timeStamp: DateTime.now(),
-        imagePath: "assets/images/mauno.png")),
-    ActivityEntry(
-      Activity(label: "Neljäs", timeStamp: DateTime.now()),
-    )
-  ];
-
-  WeekDay get weekDay {
-    return dateTimeNumberToWeekday(date.weekday);
-  }
 
   @override
   State<DayView> createState() => _DayViewState();
 }
 
 class _DayViewState extends State<DayView> {
-  static const dateHeaderHeight = 75.0;
-  final ts = const TextStyle(fontSize: 24);
+  List<ActivityEntry> activities = testActivities;
+  final textStyle = const TextStyle(fontSize: 24);
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-        color: colorForDay(widget.weekDay),
+        color: colorForDay(widget.date.weekday),
         child: Column(children: [
-          SizedBox(
-              height: dateHeaderHeight,
-              child: Text(
-                abbreviatedWeekDay(widget.date),
-                style: ts,
-              )),
+          Text(
+            abbreviatedWeekDay(widget.date),
+            style: textStyle,
+          ),
           Column(
-            children: widget.activities,
+            children: activities,
           ),
         ]));
   }
@@ -130,21 +152,6 @@ class _ActivityEntryState extends State<ActivityEntry> {
   }
 }
 
-enum WeekDay { mon, tue, wed, thu, fri, sat, sun }
-const _daysInAWeek = 7;
-
-int weekDaytoDateTimeNumber(WeekDay weekDay) {
-  return WeekDay.values.indexOf(weekDay) +
-      1; //DateTime mon-su are ints 1..7 hence +1
-}
-
-WeekDay dateTimeNumberToWeekday(int num) {
-  if (num < 1 || num > _daysInAWeek) {
-    throw InvalidWeekDayNumber("Invalid number. Expected 1..7 (got $num)");
-  }
-  return WeekDay.values[num - 1]; //DateTime mon-sun are ints 1..7 henche -1
-}
-
 String abbreviatedWeekDay(DateTime dateTime) {
   switch (dateTime.weekday) {
     case 1:
@@ -162,26 +169,29 @@ String abbreviatedWeekDay(DateTime dateTime) {
     case 7:
       return "Sun";
     default:
-      return "INVALID DATE";
+      return '';
   }
 }
 
-Color colorForDay(WeekDay day) {
-  switch (day) {
-    case WeekDay.mon:
+Color colorForDay(int weekDayNumber) {
+  //
+  switch (weekDayNumber) {
+    case 1:
       return const Color(0xff1ace65);
-    case WeekDay.tue:
+    case 2:
       return const Color(0xff3d51e3);
-    case WeekDay.wed:
+    case 3:
       return const Color(0xffffffff);
-    case WeekDay.thu:
+    case 4:
       return const Color(0xff8a6035);
-    case WeekDay.fri:
+    case 5:
       return const Color(0xffece549);
-    case WeekDay.sat:
+    case 6:
       return const Color(0xffd95fd0);
-    case WeekDay.sun:
+    case 7:
       return const Color(0xfff03d5d);
+    default:
+      return const Color(0x00000000);
   }
 }
 
@@ -249,8 +259,4 @@ class AppException implements Exception {
 
 class NoSuchActivity extends AppException {
   NoSuchActivity(String message) : super(message);
-}
-
-class InvalidWeekDayNumber extends AppException {
-  InvalidWeekDayNumber(String message) : super(message);
 }
