@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -65,10 +67,9 @@ class TestButton extends StatelessWidget {
 enum TestButtonSize { tiny, small, normal, big, huge }
 
 void goFullscreen() {
-  if (kIsWeb) {
-    return;
-  }
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  try {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  } catch (e) {}
 }
 
 MaterialColor colorToMaterial(Color color) {
@@ -89,4 +90,19 @@ MaterialColor colorToMaterial(Color color) {
 extension SameDay on DateTime {
   bool isSameDayAs(DateTime b) =>
       day == b.day && month == b.month && year == b.year;
+}
+
+class RelativeSize {
+  RelativeSize({this.relativeWidth = 0.0, this.relativeHeight = 0.0});
+
+  double forWidthOf(BuildContext context) {
+    return relativeWidth * MediaQuery.of(context).size.width;
+  }
+
+  double forHeightOf(BuildContext context) {
+    return relativeHeight * MediaQuery.of(context).size.height;
+  }
+
+  double relativeWidth;
+  double relativeHeight;
 }
