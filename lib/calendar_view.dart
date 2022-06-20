@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+
+import 'dart:math';
+
+import 'package:kalenteri/activities.dart';
 import 'package:kalenteri/util.dart';
+import 'package:kalenteri/list_extensions.dart';
 
 class WeekWidget extends StatefulWidget {
   const WeekWidget({Key? key}) : super(key: key);
@@ -10,144 +15,94 @@ class WeekWidget extends StatefulWidget {
 
 class _WeekWidgetState extends State<WeekWidget> {
   DateTime? highlightedDate;
+  static const paddingWidth = 1.0;
+
   @override
   Widget build(BuildContext context) {
     goFullscreen();
 
-    const dayWidgetWidthFraction = 1.0 / DateTime.daysPerWeek;
-    final dayWidgetWidth =
-        RelativeSize(relativeWidth: dayWidgetWidthFraction).forWidthOf(context);
     final now = DateTime.now();
     final fromNowToWeeksMonday = Duration(
         days: -now.weekday +
             1); //DateTime weekdays are 1..7 as per standard hence the +1
     final weeksMonday = now.add(fromNowToWeeksMonday);
 
-    List<Widget> dayWidgets = [];
+    var mostActivitiesOnADate = 0;
     for (int i = 0; i < DateTime.daysPerWeek; ++i) {
       final day = weeksMonday.add(Duration(days: i));
-      final dayWidget = widgetFor(day);
-      dayWidgets.add(SizedBox(
-          width: dayWidgetWidth,
-          child: GestureDetector(
-            child: dayWidget,
-            onTap: () => highlight(day),
-          )));
+      final activity = LogBook().activitiesForDay(day);
+      mostActivitiesOnADate = max(mostActivitiesOnADate, activity.length);
     }
 
-    return Row(children: dayWidgets);
-  }
+    final grid = List<Widget>.generate(
+        DateTime.daysPerWeek * mostActivitiesOnADate, (index) {
+      final weekDayNum = index % DateTime.daysPerWeek;
+      final date = weeksMonday.add(Duration(days: weekDayNum));
+      final activityIndex = index ~/ DateTime.daysPerWeek;
+      final activities = LogBook().activitiesForDay(date);
+      return activityIndex < activities.length
+          ? ActivityWidget(activities[activityIndex])
+          : Container(
+              color: colorForDay(date.weekday),
+            );
+    }, growable: false);
 
-  Widget widgetFor(DateTime time) {
-    final EdgeInsets margin;
-    final BoxDecoration decoration;
-    if (_isHighlighted(time)) {
-      margin = const EdgeInsets.only(left: 8.5, right: 8.5);
-      decoration = _highlightedDecoration;
-    } else {
-      margin = const EdgeInsets.only(left: 0.5, right: 0.5);
-      decoration = _normalDecoration;
+    final headers = <Widget>[];
+    for (final DateTime date in MondayToSunday(now)) {
+      headers.add(Expanded(
+        child: Container(
+            color: colorForDay(date.weekday),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text("${abbreviatedWeekDay(date)}\n${date.day}.${date.month}",
+                    textAlign: TextAlign.center),
+                const Divider(
+                  thickness: 5,
+                  color: Color.fromARGB(151, 39, 23, 23),
+                )
+              ],
+            )),
+      ));
     }
-    return Container(
-      child: DayWidget(
-        date: time,
+
+    return Column(children: [
+      SizedBox(
+        height: max(Scale(heightScale: 0.075).forContext(context).height, 50.0),
+        child: Row(
+          children: headers.separatedBy(
+            const Padding(
+              padding: EdgeInsets.only(right: paddingWidth),
+            ),
+          ),
+        ),
       ),
-      margin: margin,
-      decoration: decoration,
-    );
-  }
-
-  bool _isHighlighted(DateTime date) {
-    return highlightedDate != null && highlightedDate!.isSameDayAs(date);
-  }
-
-  BoxDecoration get _highlightedDecoration {
-    return BoxDecoration(boxShadow: [
-      BoxShadow(
-          spreadRadius: 8.5,
-          blurRadius: 8.5,
-          //blurStyle: BlurStyle.inner,
-          color: Colors.blueGrey.shade300),
+      Expanded(
+          child: GridView.count(
+        crossAxisCount: DateTime.daysPerWeek,
+        shrinkWrap: true,
+        mainAxisSpacing: paddingWidth,
+        crossAxisSpacing: paddingWidth,
+        children: grid,
+      ))
     ]);
   }
-
-  BoxDecoration get _normalDecoration {
-    const BorderSide borderSide = BorderSide(color: Colors.black);
-    return const BoxDecoration(
-        border: Border(left: borderSide, right: borderSide));
-  }
-
-  void highlight(DateTime day) {
-    setState(() => highlightedDate = day);
-  }
 }
 
-class DayWidget extends StatefulWidget {
-  const DayWidget({Key? key, required this.date}) : super(key: key);
-  final DateTime date;
-
-  @override
-  State<DayWidget> createState() => _DayWidgetState();
-}
-
-class _DayWidgetState extends State<DayWidget> {
-  List<ActivityWidget> activities = testActivities;
-  final textStyle = const TextStyle(fontSize: 16);
-
-  @override
-  Widget build(BuildContext context) {
-    List<Widget> activitiesWithDividers = [];
-    for (var element in activities) {
-      activitiesWithDividers.addAll([
-        element,
-        const Divider(
-          thickness: 1.0,
-          color: Colors.black,
-        )
-      ]);
-    }
-    return ColoredBox(
-        color: colorForDay(widget.date.weekday),
-        child: Column(children: [
-          Container(
-            child: Column(children: [
-              Text(
-                "${widget.date.day}.${widget.date.month}.\n${abbreviatedWeekDay(widget.date)}",
-                style: textStyle,
-                maxLines: 2,
-              ),
-              const Divider(
-                thickness: 5.0,
-              )
-            ]),
-            margin: const EdgeInsets.only(bottom: 20),
-          ),
-          Column(
-            children: activitiesWithDividers,
-          ),
-        ]));
-  }
-}
-
-class ActivityWidget extends StatefulWidget {
-  const ActivityWidget(this.activity, {Key? key}) : super(key: key);
-
+class ActivityWidget extends StatelessWidget {
+  ActivityWidget(this.activity, {Key? key}) : super(key: key);
   final Activity activity;
-
-  @override
-  State<ActivityWidget> createState() => _ActivityWidgetState();
-}
-
-class _ActivityWidgetState extends State<ActivityWidget> {
-  late Widget image = widget.activity.imagePath != null
-      ? Image(image: AssetImage(widget.activity.imagePath!))
+  late final Widget image = activity.imagePath != null
+      ? Image(image: AssetImage(activity.imagePath!))
       : Container();
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [Text(widget.activity.label), image],
-    );
+    return Container(
+        color: colorForDay(activity.timeStamp.weekday),
+        child: Column(
+          //mainAxisSize: MainAxisSize.min,
+          children: [Expanded(child: Text(activity.label)), image],
+        ));
   }
 }
 
@@ -167,8 +122,9 @@ String abbreviatedWeekDay(DateTime dateTime) {
       return "Sat";
     case 7:
       return "Sun";
-    default:
-      return '';
+    default: //should never happen but the compiler doesn't approve of omitting this
+      throw AssertionError(
+          "DateTime object's weekday property whould always be [1..7]");
   }
 }
 
@@ -180,7 +136,7 @@ Color colorForDay(int weekDayNumber) {
     case 2:
       return const Color(0xff3d51e3);
     case 3:
-      return const Color(0xffffffff);
+      return const Color(0xffe0e0e0);
     case 4:
       return const Color(0xff8a6035);
     case 5:
@@ -194,84 +150,51 @@ Color colorForDay(int weekDayNumber) {
   }
 }
 
-class Activity {
-  Activity({required this.timeStamp, required this.label, this.imagePath});
-
-  DateTime timeStamp;
-  String label;
-  String? imagePath;
-}
-
-class ActivityLogBook {
-  ActivityLogBook();
-
-  final _dateActivity = <DateTime, Activity>{};
-  final _activityDate = <Activity, DateTime>{};
-
-  void logActivity({required DateTime timeStamp, required Activity activity}) {
-    _dateActivity[timeStamp] = activity;
-    _activityDate[activity] = timeStamp;
-  }
-
-  Activity getActivity(DateTime timeStamp) {
-    final Activity? activity = _dateActivity[timeStamp];
-    if (activity == null) {
-      throw NoSuchActivity(
-          "TimeStamp {$timeStamp} has not been associated with an activity");
-    }
-    return _dateActivity[timeStamp]!;
-  }
-
-  DateTime getTimeStamp(Activity activity) {
-    final DateTime? date = _activityDate[activity];
-    if (date == null) {
-      throw NoSuchActivity("Activity {$activity} hasn't been logged");
-    }
-    return _activityDate[activity]!;
-  }
-
-  void removeByActivity(Activity activity) {
-    _removeActivity(activity);
-  }
-
-  void removeByTimeStamp(DateTime timeStamp) {
-    final activity = getActivity(timeStamp);
-    _removeActivity(activity);
-  }
-
-  void _removeActivity(Activity activity) {
-    final timeStamp = getTimeStamp(activity);
-    _activityDate.remove(activity);
-    _dateActivity.remove(timeStamp);
-  }
-}
-
-class NoSuchActivity implements Exception {
-  String message;
-  NoSuchActivity(this.message);
-}
-
+//TEST ACTIVITIES ============>
 const mauno = Image(image: AssetImage("assets/images/mauno.png"));
 
-final List<ActivityWidget> testActivities = () {
+final List<Activity> testActivities = () {
   final a = [
-    ActivityWidget(Activity(label: "Eka", timeStamp: DateTime.now())),
-    ActivityWidget(Activity(
+    Activity(label: "Eka", timeStamp: DateTime.now()),
+    Activity(
         label:
             "Toka ja ihan helvetin pitkä mussutus jostain ihan oudosta asiasta",
-        timeStamp: DateTime.now())),
-    ActivityWidget(Activity(
+        timeStamp: DateTime.now()),
+    Activity(
         label: "Kolmas (Mauno)",
         timeStamp: DateTime.now(),
-        imagePath: "assets/images/mauno.png")),
-    ActivityWidget(
-      Activity(label: "Neljäs", timeStamp: DateTime.now()),
+        imagePath: "assets/images/mauno.png"),
+    Activity(
+      label: "Neljäs",
+      timeStamp: DateTime.now(),
     )
   ];
+  final now = DateTime.now();
+  final weeksMonday = now.add(Duration(days: 1 - now.weekday));
 
-  List<ActivityWidget> ret = [];
-  for (int i = 0; i < 4; ++i) {
-    ret.addAll(a);
+  List<Activity> ret = [];
+  for (int i = 0; i < DateTime.daysPerWeek; ++i) {
+    final repeatingActivities = a
+        .map((act) => Activity(
+            timeStamp: weeksMonday.add(Duration(days: i)),
+            label: act.label,
+            imagePath: act.imagePath))
+        .toList();
+    ret.addAll(List.generate(repeatingActivities.length * 4,
+        (index) => repeatingActivities[index % repeatingActivities.length],
+        growable: true));
   }
+
   return ret;
 }();
+
+void initTestActivities() {
+  final rng = Random(1);
+  for (final a in testActivities) {
+    if (rng.nextBool()) {
+      LogBook().logActivity(a);
+    }
+  }
+}
+
+//<============ TEST ACTIVITIES

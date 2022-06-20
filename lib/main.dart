@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:kalenteri/util.dart';
-
 import 'calendar_view.dart';
 
 void main() {
+  initTestActivities();
+
   runApp(const MaterialApp(
     home: Scaffold(
       body: WeekWidget(),

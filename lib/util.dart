@@ -2,7 +2,6 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 
 class TestButton extends StatelessWidget {
   const TestButton(
@@ -69,7 +68,9 @@ enum TestButtonSize { tiny, small, normal, big, huge }
 void goFullscreen() {
   try {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  } catch (e) {}
+  } catch (e) {
+    return;
+  }
 }
 
 MaterialColor colorToMaterial(Color color) {
@@ -92,17 +93,44 @@ extension SameDay on DateTime {
       day == b.day && month == b.month && year == b.year;
 }
 
-class RelativeSize {
-  RelativeSize({this.relativeWidth = 0.0, this.relativeHeight = 0.0});
+class Scale {
+  Scale({this.widthScale = 1.0, this.heightScale = 1.0});
 
-  double forWidthOf(BuildContext context) {
-    return relativeWidth * MediaQuery.of(context).size.width;
+  Size forContext(BuildContext context) {
+    return forSize(MediaQuery.of(context).size);
   }
 
-  double forHeightOf(BuildContext context) {
-    return relativeHeight * MediaQuery.of(context).size.height;
+  Size forSize(Size size) {
+    return Size(widthScale * size.width, heightScale * size.height);
   }
 
-  double relativeWidth;
-  double relativeHeight;
+  double widthScale;
+  double heightScale;
+}
+
+class MondayToSunday extends Iterable {
+  MondayToSunday(this.date);
+
+  @override
+  Iterator get iterator => MondayToSundayIterator(date);
+
+  DateTime date;
+}
+
+class MondayToSundayIterator extends Iterator<DateTime> {
+  MondayToSundayIterator(DateTime date)
+      : _weeksMonday = date.add(Duration(days: -date.weekday));
+
+  @override
+  DateTime get current => _weeksMonday.add(Duration(days: _index));
+
+  @override
+  bool moveNext() {
+    if (_index >= DateTime.daysPerWeek) return false;
+    ++_index;
+    return true;
+  }
+
+  final DateTime _weeksMonday;
+  int _index = 0;
 }
