@@ -40,7 +40,15 @@ class _WeekWidgetState extends State<WeekWidget> {
       final activitiesForDay = LogBook().activitiesForDay(day);
       final weekDay = WeekDay.values[i];
       final List<Widget> widgetsForDay = (activitiesForDay
-          .map((activity) => ActivityWidget(activity) as Widget)).toList();
+              .map((activity) => ActivityWidget(activity) as Widget))
+          .toList()
+          .separatedAndSurroundedByBuilder(
+            (index) => SizedBox(
+              height: 50,
+              child: Container(
+                  color: colorForDay(weekDay.toDateTime()), child: Divider()),
+            ),
+          );
       mostActivitiesOnADate = max(mostActivitiesOnADate, widgetsForDay.length);
       activityWidgets[weekDay] = widgetsForDay;
     }
@@ -76,38 +84,32 @@ class _WeekWidgetState extends State<WeekWidget> {
         ),
       ),
       Expanded(
-        child: ListView.separated(
+        child: ListView.builder(
           itemCount: mostActivitiesOnADate,
-          separatorBuilder: (context, index) {
-            return Row(
-              children: _dividerRow,
-            );
-          },
           itemBuilder: (context, vertIndex) {
             return SizedBox(
               width: MediaQuery.of(context).size.width,
-              height: 150,
-              child: AspectRatio(
-                  aspectRatio: (MediaQuery.of(context).size.width / 7) / 150,
-                  child: Row(
-                    children: List<Widget>.generate(
-                      DateTime.daysPerWeek,
-                      (horIndex) {
-                        final daysActivities =
-                            activityWidgets[WeekDay.values[horIndex]]!;
-                        final widget = vertIndex < daysActivities.length
-                            ? daysActivities[vertIndex]
-                            : Container(
-                                color: colorForDay(horIndex + 1),
-                              );
-                        return SizedBox(
-                          width: MediaQuery.of(context).size.width /
-                              DateTime.daysPerWeek,
-                          child: widget,
-                        );
-                      },
-                    ),
-                  )),
+              child: Row(
+                children: List<Widget>.generate(
+                  DateTime.daysPerWeek,
+                  (horIndex) {
+                    final daysActivities =
+                        activityWidgets[WeekDay.values[horIndex]]!;
+                    final widget = vertIndex < daysActivities.length
+                        ? daysActivities[vertIndex]
+                        : SizedBox(
+                            height: vertIndex.isEven ? 50 : 150,
+                            child: Container(
+                              color: colorForDay(horIndex + 1),
+                            ));
+                    return SizedBox(
+                      width: MediaQuery.of(context).size.width /
+                          DateTime.daysPerWeek,
+                      child: widget,
+                    );
+                  },
+                ),
+              ),
             );
           },
         ),
@@ -124,14 +126,17 @@ class ActivityWidget extends StatelessWidget {
       : Container();
   @override
   Widget build(BuildContext context) {
-    return Container(
-        color: colorForDay(activity.timeStamp.weekday),
-        child: Column(
-          //mainAxisSize: MainAxisSize.min,
-          children: [
-            Expanded(child: Text(activity.label)),
-            Expanded(child: image)
-          ],
+    return SizedBox(
+        height: 150,
+        child: Container(
+          color: colorForDay(activity.timeStamp.weekday),
+          child: Column(
+            //mainAxisSize: MainAxisSize.min,
+            children: [
+              Expanded(child: Text(activity.label)),
+              Expanded(child: image)
+            ],
+          ),
         ));
   }
 }
@@ -180,13 +185,6 @@ Color colorForDay(int weekDayNumber) {
   }
 }
 
-final _dividerRow = List<Widget>.generate(
-    DateTime.daysPerWeek,
-    (index) => Container(
-          color: colorForDay(index + 1),
-          child: const Divider(),
-        ));
-
 //TEST ACTIVITIES ============>
 const mauno = Image(image: AssetImage("assets/images/mauno.png"));
 
@@ -228,9 +226,9 @@ final List<Activity> testActivities = () {
 void initTestActivities() {
   final rng = Random(1);
   for (final a in testActivities) {
-    //if (rng.nextBool()) {
-    LogBook().logActivity(a);
-    //}
+    if (rng.nextBool()) {
+      LogBook().logActivity(a);
+    }
   }
 }
 
