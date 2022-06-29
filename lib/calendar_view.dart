@@ -4,7 +4,9 @@ import 'dart:math';
 
 import 'package:kalenteri/activities.dart';
 import 'package:kalenteri/util.dart';
-import 'package:kalenteri/list_extensions.dart';
+import 'package:kalenteri/dates.dart';
+
+import 'package:list_extensions/list_extensions.dart';
 
 class WeekWidget extends StatefulWidget {
   const WeekWidget({Key? key}) : super(key: key);
@@ -14,8 +16,8 @@ class WeekWidget extends StatefulWidget {
 }
 
 class _WeekWidgetState extends State<WeekWidget> {
+  static const paddingWidth = 0.0;
   DateTime? highlightedDate;
-  static const paddingWidth = 1.0;
 
   @override
   Widget build(BuildContext context) {
@@ -28,24 +30,20 @@ class _WeekWidgetState extends State<WeekWidget> {
     final weeksMonday = now.add(fromNowToWeeksMonday);
 
     var mostActivitiesOnADate = 0;
-    for (int i = 0; i < DateTime.daysPerWeek; ++i) {
-      final day = weeksMonday.add(Duration(days: i));
-      final activity = LogBook().activitiesForDay(day);
-      mostActivitiesOnADate = max(mostActivitiesOnADate, activity.length);
+    final Map<WeekDay, List<Widget>> activityWidgets = {};
+    for (int i = 0; i < WeekDay.values.length; ++i) {
+      activityWidgets[WeekDay.values[i]] = [];
     }
 
-    final grid = List<Widget>.generate(
-        DateTime.daysPerWeek * mostActivitiesOnADate, (index) {
-      final weekDayNum = index % DateTime.daysPerWeek;
-      final date = weeksMonday.add(Duration(days: weekDayNum));
-      final activityIndex = index ~/ DateTime.daysPerWeek;
-      final activities = LogBook().activitiesForDay(date);
-      return activityIndex < activities.length
-          ? ActivityWidget(activities[activityIndex])
-          : Container(
-              color: colorForDay(date.weekday),
-            );
-    }, growable: false);
+    for (int i = 0; i < DateTime.daysPerWeek; ++i) {
+      final day = weeksMonday.add(Duration(days: i));
+      final activitiesForDay = LogBook().activitiesForDay(day);
+      final weekDay = WeekDay.values[i];
+      final List<Widget> widgetsForDay = (activitiesForDay
+          .map((activity) => ActivityWidget(activity) as Widget)).toList();
+      mostActivitiesOnADate = max(mostActivitiesOnADate, widgetsForDay.length);
+      activityWidgets[weekDay] = widgetsForDay;
+    }
 
     final headers = <Widget>[];
     for (final DateTime date in MondayToSunday(now)) {
@@ -68,7 +66,7 @@ class _WeekWidgetState extends State<WeekWidget> {
 
     return Column(children: [
       SizedBox(
-        height: max(Scale(heightScale: 0.075).forContext(context).height, 50.0),
+        height: max(Scale(heightScale: 0.075).forContext(context).height, 60.0),
         child: Row(
           children: headers.separatedBy(
             const Padding(
@@ -78,13 +76,42 @@ class _WeekWidgetState extends State<WeekWidget> {
         ),
       ),
       Expanded(
-          child: GridView.count(
-        crossAxisCount: DateTime.daysPerWeek,
-        shrinkWrap: true,
-        mainAxisSpacing: paddingWidth,
-        crossAxisSpacing: paddingWidth,
-        children: grid,
-      ))
+        child: ListView.separated(
+          itemCount: mostActivitiesOnADate,
+          separatorBuilder: (context, index) {
+            return Row(
+              children: _dividerRow,
+            );
+          },
+          itemBuilder: (context, vertIndex) {
+            return SizedBox(
+              width: MediaQuery.of(context).size.width,
+              height: 150,
+              child: AspectRatio(
+                  aspectRatio: (MediaQuery.of(context).size.width / 7) / 150,
+                  child: Row(
+                    children: List<Widget>.generate(
+                      DateTime.daysPerWeek,
+                      (horIndex) {
+                        final daysActivities =
+                            activityWidgets[WeekDay.values[horIndex]]!;
+                        final widget = vertIndex < daysActivities.length
+                            ? daysActivities[vertIndex]
+                            : Container(
+                                color: colorForDay(horIndex + 1),
+                              );
+                        return SizedBox(
+                          width: MediaQuery.of(context).size.width /
+                              DateTime.daysPerWeek,
+                          child: widget,
+                        );
+                      },
+                    ),
+                  )),
+            );
+          },
+        ),
+      ),
     ]);
   }
 }
@@ -101,7 +128,10 @@ class ActivityWidget extends StatelessWidget {
         color: colorForDay(activity.timeStamp.weekday),
         child: Column(
           //mainAxisSize: MainAxisSize.min,
-          children: [Expanded(child: Text(activity.label)), image],
+          children: [
+            Expanded(child: Text(activity.label)),
+            Expanded(child: image)
+          ],
         ));
   }
 }
@@ -150,6 +180,13 @@ Color colorForDay(int weekDayNumber) {
   }
 }
 
+final _dividerRow = List<Widget>.generate(
+    DateTime.daysPerWeek,
+    (index) => Container(
+          color: colorForDay(index + 1),
+          child: const Divider(),
+        ));
+
 //TEST ACTIVITIES ============>
 const mauno = Image(image: AssetImage("assets/images/mauno.png"));
 
@@ -191,9 +228,9 @@ final List<Activity> testActivities = () {
 void initTestActivities() {
   final rng = Random(1);
   for (final a in testActivities) {
-    if (rng.nextBool()) {
-      LogBook().logActivity(a);
-    }
+    //if (rng.nextBool()) {
+    LogBook().logActivity(a);
+    //}
   }
 }
 
