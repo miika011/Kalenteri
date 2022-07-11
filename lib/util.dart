@@ -108,6 +108,7 @@ class Scale {
   double heightScale;
 }
 
+//Iterable that iterates through the same week's monday to sunday of a given date.
 class MondayToSunday extends Iterable {
   MondayToSunday(this.date);
 

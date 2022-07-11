@@ -4,7 +4,7 @@ import 'dart:math';
 
 import 'package:kalenteri/activities.dart';
 import 'package:kalenteri/util.dart';
-import 'package:kalenteri/list_extensions.dart';
+import 'package:list_extensions/list_extensions.dart';
 
 class WeekWidget extends StatefulWidget {
   const WeekWidget({Key? key}) : super(key: key);
