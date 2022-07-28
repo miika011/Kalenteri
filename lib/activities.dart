@@ -8,7 +8,7 @@ class Activity {
   String? imagePath;
 }
 
-//Singleton logbook for logging activities
+/// Logbook (singleton) for logging activities
 class LogBook {
   static final LogBook _singleton = LogBook._internal();
   LogBook._internal();

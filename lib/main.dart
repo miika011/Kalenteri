@@ -4,9 +4,9 @@ import 'calendar_view.dart';
 void main() {
   initTestActivities();
 
-  runApp(const MaterialApp(
-    home: Scaffold(
-      body: WeekWidget(),
+  runApp(
+    MaterialApp(
+      home: WeekWidget(DateTime.now()),
     ),
-  ));
+  );
 }

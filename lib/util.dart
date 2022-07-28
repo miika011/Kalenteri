@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -134,4 +132,28 @@ class MondayToSundayIterator extends Iterator<DateTime> {
 
   final DateTime _weeksMonday;
   int _index = 0;
+}
+
+class DateTimeRangeError extends RangeError {
+  DateTimeRangeError.weekDay(int invalidValue)
+      : super.range(invalidValue, 1, 7, "weekday number",
+            "Integer representing a week day has to be in range [1,7] (monday to sunday) $Iso8601Explanation.");
+  DateTimeRangeError.month(int invalidValue)
+      : super.range(
+            invalidValue,
+            1,
+            12,
+            "month number"
+            "Integer representing a month has to be in range [1,12] (Jan to Dec) $Iso8601Explanation.");
+
+  // ignore: constant_identifier_names
+  static const String Iso8601Explanation =
+      "(ISO 8601 standard used by DateTime objects in the default library)";
+}
+
+extension FactorBy on Color {
+  Color factorBy(double factor) {
+    return Color.fromARGB(alpha, (red * factor).round(),
+        (green * factor).round(), (blue * factor).round());
+  }
 }
