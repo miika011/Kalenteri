@@ -1,11 +1,12 @@
+import 'dart:io';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:kalenteri/activities.dart';
 import 'package:kalenteri/add_activity_view.dart';
 import 'package:kalenteri/util.dart';
-
-import 'dart:math';
 
 class WeekWidget extends StatefulWidget {
   const WeekWidget(this.dayInTheWeek, {Key? key}) : super(key: key);
@@ -15,7 +16,6 @@ class WeekWidget extends StatefulWidget {
 
   final DateTime dayInTheWeek;
 
-  static const headerHeight = 90.0;
   static const activityHeight = 150.0;
   static const imageHeight = activityHeight * 0.55;
   static const addButtonDisabledHeight = 8.0;
@@ -25,6 +25,11 @@ class WeekWidget extends StatefulWidget {
 }
 
 class _WeekWidgetState extends State<WeekWidget> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
@@ -42,10 +47,28 @@ class _WeekWidgetState extends State<WeekWidget> {
                   details.globalPosition.dx - _dragStart!.dx,
                   details.globalPosition.dy - _dragStart!.dy);
 
-              if (offsetFromStart.dx.abs() > offsetFromStart.dy.abs()) {
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("scrolling horizontally")));
+              final scrollTreshold = MediaQuery.of(context).size.width * 0.175;
+              if (offsetFromStart.dx.abs() > scrollTreshold &&
+                  offsetFromStart.dx.abs() > offsetFromStart.dy.abs() * 1.33) {
+                if (offsetFromStart.dx < 0) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("scrolling forward")));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => WeekWidget(widget.dayInTheWeek
+                              .add(const Duration(days: 7)))));
+                } else {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("scrolling backwards")));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => WeekWidget(widget.dayInTheWeek
+                              .add(const Duration(days: -7)))));
+                }
               }
             },
             child: Stack(
@@ -54,13 +77,13 @@ class _WeekWidgetState extends State<WeekWidget> {
                   children: [
                     SizedBox(
                       width: availableSize.width,
-                      height: WeekWidget.headerHeight,
+                      height: headerHeight(context),
                       child: buildHeaderRowForWeek(
-                        DateTime.now(),
+                        widget.dayInTheWeek,
                       ),
                     ),
                     Expanded(
-                      child: buildActivityGridForWeek(DateTime.now(),
+                      child: buildActivityGridForWeek(widget.dayInTheWeek,
                           context: context),
                     ),
                   ],
@@ -82,8 +105,12 @@ class _WeekWidgetState extends State<WeekWidget> {
     );
   }
 
+  double headerHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.08;
+  }
+
   Widget buildHeaderRowForWeek(DateTime dayInTheWeek) {
-    return Row(
+    var row = Row(
       children: MondayToSunday(dayInTheWeek)
           .map(
             (date) => Expanded(
@@ -95,6 +122,7 @@ class _WeekWidgetState extends State<WeekWidget> {
           )
           .toList(),
     );
+    return row;
   }
 
   Widget buildActivityGridForWeek(DateTime dayInTheWeek,
@@ -131,7 +159,7 @@ class _WeekWidgetState extends State<WeekWidget> {
               ? (_isAddingActivities
                   ? WeekWidget.addButtonEnabledHeight
                   : WeekWidget.addButtonDisabledHeight)
-              : WeekWidget.activityHeight,
+              : activityHeight(context),
           duration: WeekWidget.addActivityTransitionDuration,
           curve: Curves.easeInBack,
           child: Row(
@@ -142,14 +170,21 @@ class _WeekWidgetState extends State<WeekWidget> {
     );
   }
 
+  double activityHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.17;
+  }
+
   List<List<Widget>> generateGridRows(DateTime dayInTheWeek,
       {required BuildContext context}) {
+    int maxActivities = 0;
+    for (DateTime dateTime in MondayToSunday(dayInTheWeek)) {
+      maxActivities = max(maxActivities,
+          LogBook().activitiesForDate(Date.fromDateTime(dateTime)).length);
+    }
     List<List<Widget>> gridRows = [];
-    bool hasMore = true;
-    for (int rowIndex = 0; hasMore; ++rowIndex) {
+    for (int rowIndex = 0; rowIndex <= maxActivities * 2; ++rowIndex) {
       final activityIndex = rowIndex ~/ 2;
       List<Widget> row = [];
-      hasMore = false;
       for (DateTime day in MondayToSunday(dayInTheWeek)) {
         if (rowIndex.isEven) {
           row.add(
@@ -164,25 +199,28 @@ class _WeekWidgetState extends State<WeekWidget> {
             ),
           );
         }
-        hasMore = activityIndex <= LogBook().activitiesForDay(day).length;
       }
-      if (hasMore) {
-        gridRows.add(row);
-      }
+      gridRows.add(row);
     }
     return gridRows;
   }
 
   Widget generateActivityWidget({required DateTime day, required int index}) {
-    final activitiesForDay = LogBook().activitiesForDay(day);
+    final activitiesForDay =
+        LogBook().activitiesForDate(Date.fromDateTime(day));
     Widget? child;
-    if (index < activitiesForDay.length) {
-      child = ActivityWidget(activitiesForDay[index]);
-    }
+    Activity? activity =
+        index < activitiesForDay.length ? activitiesForDay[index] : null;
+
+    child = ActivityWidget(
+      activity,
+      headerText: (index + 1).toString(),
+    );
+
     return Container(
       //padding: EdgeInsets.zero,
       decoration: decorationForActivity(day),
-      child: child,
+      child: SizedBox(height: activityHeight(context), child: child),
     );
   }
 
@@ -191,14 +229,28 @@ class _WeekWidgetState extends State<WeekWidget> {
     if (_isAddingActivities) {
       return ElevatedButton(
         style: style,
-        onPressed: () {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (context) => const AddActivityWidget(),
-          ));
+        onPressed: () async {
+          final Activity? activity = await Navigator.push<Activity?>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddActivityWidget(
+                  date: Date.fromDateTime(day), activityIndex: index),
+            ),
+          );
+          if (activity != null) {
+            setState(
+              () {
+                LogBook().logActivity(activity, index);
+                LogBook.save();
+              },
+            );
+          }
         },
         child: Ink(
           decoration: decorationForAddActivityButton,
-          child: const AddActivityButton(),
+          child: const AddActivityButton(
+            iconSize: WeekWidget.addButtonDisabledHeight * 1.75,
+          ),
         ),
       );
     } else {
@@ -318,7 +370,7 @@ class DayHeaderWidget extends StatelessWidget {
   }
 
   TextStyle get textStyle {
-    return GoogleFonts.cabinSketch(fontSize: 42.0);
+    return GoogleFonts.getFont("Cabin Sketch", fontSize: 32.0);
   }
 
   String get dateString {
@@ -332,48 +384,60 @@ class DayHeaderWidget extends StatelessWidget {
   final DateTime _date;
 }
 
-class ActivityGrid extends StatelessWidget {
-  const ActivityGrid({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
-}
-
 class ActivityWidget extends StatelessWidget {
-  const ActivityWidget(this._activity, {Key? key}) : super(key: key);
+  const ActivityWidget(this._activity, {Key? key, String? headerText})
+      : headerText = headerText ?? "",
+        super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final Widget? imageOrNull =
-        _activity.imagePath != null ? Image.asset(_activity.imagePath!) : null;
-
-    return SizedBox(
-      height: WeekWidget.activityHeight,
-      child: Wrap(spacing: 0.0, children: [
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        Container(
+          decoration: const BoxDecoration(boxShadow: [
+            BoxShadow(color: Color.fromARGB(55, 0, 0, 0), blurRadius: 3)
+          ]),
+          margin: const EdgeInsets.only(bottom: 3),
+          child: Center(
+            child: Text(
+              headerText,
+              style: const TextStyle(
+                  fontSize: 20, color: Color.fromARGB(255, 59, 62, 65)),
+            ),
+          ),
+        ),
         Align(
           alignment: Alignment.topCenter,
-          child: SizedBox(
-              height: imageOrNull == null ? 0 : imageHeight,
-              child: imageOrNull),
+          child: image,
         ),
-        Text(_activity.label),
-      ]),
+        Text(label),
+      ],
     );
   }
 
-  get imageHeight => WeekWidget.imageHeight;
+  String get label => _activity != null ? _activity!.label : "";
+
+  Widget get image => hasImage
+      ? Image(
+          image: FileImage(_activity!.imageFile!),
+        )
+      : Container();
+
+  double get imageHeight => hasImage ? WeekWidget.imageHeight : 0.0;
+
+  bool get hasImage => _activity?.imageFile != null;
 
   TextStyle get textStyle {
     return const TextStyle(fontFamily: "Unna");
   }
 
-  final Activity _activity;
+  final Activity? _activity;
+  final String headerText;
 }
 
 class AddActivityButton extends StatelessWidget {
-  const AddActivityButton({Key? key}) : super(key: key);
+  const AddActivityButton({Key? key, required this.iconSize}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -401,9 +465,7 @@ class AddActivityButton extends StatelessWidget {
     return Icons.add_circle_outline;
   }
 
-  double get iconSize => WeekWidget.addButtonDisabledHeight * 1.75;
-
-  static const darkenFactor = 0.9;
+  final double iconSize;
 }
 
 String abbreviatedWeekDay(DateTime date) {
@@ -432,18 +494,19 @@ const mauno = Image(image: AssetImage("assets/images/mauno.png"));
 
 final List<Activity> testActivities = () {
   final a = [
-    Activity(label: "Eka", timeStamp: DateTime.now()),
+    Activity(label: "Eka", date: Date.fromDateTime(DateTime.now())),
     Activity(
         label:
             "Toka ja ihan helvetin pitkä mussutus jostain ihan oudosta asiasta",
-        timeStamp: DateTime.now()),
+        date: Date.fromDateTime(DateTime.now())),
     Activity(
-        label: "Kolmas (Mauno)",
-        timeStamp: DateTime.now(),
-        imagePath: "assets/images/mauno.png"),
+      label: "Kolmas (Mauno)",
+      date: Date.fromDateTime(DateTime.now()),
+      imageFile: File("assets/images/mauno.png"),
+    ),
     Activity(
       label: "Neljäs",
-      timeStamp: DateTime.now(),
+      date: Date.fromDateTime(DateTime.now()),
     )
   ];
   final now = DateTime.now();
@@ -453,11 +516,11 @@ final List<Activity> testActivities = () {
   for (int i = 0; i < DateTime.daysPerWeek; ++i) {
     final repeatingActivities = a
         .map((act) => Activity(
-            timeStamp: weeksMonday.add(Duration(days: i)),
+            date: Date.fromDateTime(weeksMonday.add(Duration(days: i))),
             label: act.label,
-            imagePath: act.imagePath))
+            imageFile: act.imageFile))
         .toList();
-    ret.addAll(List.generate(repeatingActivities.length * 4,
+    ret.addAll(List.generate(repeatingActivities.length,
         (index) => repeatingActivities[index % repeatingActivities.length],
         growable: true));
   }
@@ -466,11 +529,9 @@ final List<Activity> testActivities = () {
 }();
 
 void initTestActivities() {
-  final rng = Random(1);
   for (final a in testActivities) {
-    if (rng.nextBool()) {
-      LogBook().logActivity(a);
-    }
+    final i = LogBook().activitiesForDate(a.date).length;
+    LogBook().logActivity(a, i);
   }
 }
 

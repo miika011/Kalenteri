@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -108,12 +110,12 @@ class Scale {
 
 //Iterable that iterates through the same week's monday to sunday of a given date.
 class MondayToSunday extends Iterable {
-  MondayToSunday(this.date);
+  MondayToSunday(this.dateTime);
 
   @override
-  Iterator get iterator => MondayToSundayIterator(date);
+  Iterator get iterator => MondayToSundayIterator(dateTime);
 
-  DateTime date;
+  DateTime dateTime;
 }
 
 class MondayToSundayIterator extends Iterator<DateTime> {
@@ -156,4 +158,41 @@ extension FactorBy on Color {
     return Color.fromARGB(alpha, (red * factor).round(),
         (green * factor).round(), (blue * factor).round());
   }
+}
+
+class Date {
+  Date({required this.day, required this.month, required this.year});
+  Date.fromDateTime(DateTime dateTime)
+      : day = dateTime.day,
+        month = dateTime.month,
+        year = dateTime.year;
+
+  Date.fromJson(Map<String, dynamic> json)
+      : year = json["year"],
+        month = json["month"],
+        day = json["day"];
+
+  Map<String, dynamic> toJson() => {'year': year, "month": month, "day": day};
+
+  @override
+  bool operator ==(Object other) {
+    return other is Date &&
+        other.runtimeType == runtimeType &&
+        other.day == day &&
+        other.month == month &&
+        other.year == year;
+  }
+
+  @override
+  int get hashCode {
+    int result = 17;
+    result = 37 * result + day.hashCode;
+    result = 37 * result + month.hashCode;
+    result = 37 * result + year.hashCode;
+    return result;
+  }
+
+  int day;
+  int month;
+  int year;
 }
