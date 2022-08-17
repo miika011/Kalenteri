@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -110,20 +108,22 @@ class Scale {
 
 //Iterable that iterates through the same week's monday to sunday of a given date.
 class MondayToSunday extends Iterable {
-  MondayToSunday(this.dateTime);
+  MondayToSunday(this.date);
 
   @override
-  Iterator get iterator => MondayToSundayIterator(dateTime);
+  Iterator get iterator => MondayToSundayIterator(date);
 
-  DateTime dateTime;
+  Date date;
 }
 
-class MondayToSundayIterator extends Iterator<DateTime> {
-  MondayToSundayIterator(DateTime date)
-      : _weeksMonday = date.add(Duration(days: -date.weekday));
+class MondayToSundayIterator extends Iterator<Date> {
+  MondayToSundayIterator(Date date)
+      : _weeksMonday =
+            date.toDateTime().add(Duration(days: -date.toDateTime().weekday));
 
   @override
-  DateTime get current => _weeksMonday.add(Duration(days: _index));
+  Date get current =>
+      Date.fromDateTime(_weeksMonday.add(Duration(days: _index)));
 
   @override
   bool moveNext() {
@@ -160,17 +160,58 @@ extension FactorBy on Color {
   }
 }
 
+Color backgroundColorForActivity(Date date) {
+  switch (date.weekdayEnum) {
+    case Weekday.mon:
+      return const Color(0xFFAFEEC9);
+    case Weekday.tue:
+      return const Color(0xFFBBC2F5);
+    case Weekday.wed:
+      return const Color(0xFFF4F4F4);
+    case Weekday.thu:
+      return const Color(0xFFD6C7B8);
+    case Weekday.fri:
+      return const Color(0xFFF8F6BF);
+    case Weekday.sat:
+      return const Color(0xFFF2C7EF);
+    case Weekday.sun:
+      return const Color(0xFFFABBC6);
+  }
+}
+
+Color backgroundColorForHeader(Date date) {
+  switch (date.weekdayEnum) {
+    case Weekday.mon:
+      return const Color(0xFF83E4AB);
+    case Weekday.tue:
+      return const Color(0xFF96A0F0);
+    case Weekday.wed:
+      return const Color(0xFFEEEEEE);
+    case Weekday.thu:
+      return const Color(0xFFBFA991);
+    case Weekday.fri:
+      return const Color(0xFFF5F19C);
+    case Weekday.sat:
+      return const Color(0xFFEAA8E5);
+    case Weekday.sun:
+      return const Color(0xFFF796A7);
+  }
+}
+
 class Date {
-  Date({required this.day, required this.month, required this.year});
+  Date({required this.day, required this.month, required this.year}) {
+    if (!_isSaneState()) {
+      throw ArgumentError("Invalid date (y/m/d): $year/$month/$day");
+    }
+  }
   Date.fromDateTime(DateTime dateTime)
       : day = dateTime.day,
         month = dateTime.month,
         year = dateTime.year;
 
-  Date.fromJson(Map<String, dynamic> json)
-      : year = json["year"],
-        month = json["month"],
-        day = json["day"];
+  factory Date.fromJson(Map<String, dynamic> json) {
+    return Date(year: json["year"], month: json["month"], day: json["day"]);
+  }
 
   Map<String, dynamic> toJson() => {'year': year, "month": month, "day": day};
 
@@ -192,7 +233,70 @@ class Date {
     return result;
   }
 
-  int day;
-  int month;
-  int year;
+  DateTime toDateTime() {
+    return DateTime(year, month, day);
+  }
+
+  Weekday get weekdayEnum {
+    final weekDayIndex =
+        toDateTime().weekday - 1; // DateTime weekdays are [1,7]
+    return Weekday.values[weekDayIndex];
+  }
+
+  Month get monthEnum {
+    final monthIndex = toDateTime().month - 1; //DateTime months are [1,12]
+    return Month.values[monthIndex];
+  }
+
+  bool _isSaneState() {
+    DateTime dt = toDateTime();
+    return (dt.day == day && dt.month == month && dt.year == year);
+  }
+
+  String get abbreviatedWeekDay {
+    switch (weekdayEnum) {
+      case Weekday.mon:
+        return "Ma";
+      case Weekday.tue:
+        return "Ti";
+      case Weekday.wed:
+        return "Ke";
+      case Weekday.thu:
+        return "To";
+      case Weekday.fri:
+        return "Pe";
+      case Weekday.sat:
+        return "La";
+      case Weekday.sun:
+        return "Su";
+    }
+  }
+
+  String toDMY({String delimiter = ".", bool endWithDelimiter = true}) {
+    return "$day$delimiter$month$delimiter$year${endWithDelimiter ? delimiter : ""}";
+  }
+
+  @override
+  String toString() {
+    return toDMY();
+  }
+
+  final int day;
+  final int month;
+  final int year;
+}
+
+enum Weekday { mon, tue, wed, thu, fri, sat, sun }
+
+enum Month { jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec }
+
+showSnack(BuildContext context, String text) {
+  final sm = ScaffoldMessenger.of(context);
+  sm.clearSnackBars();
+  sm.showSnackBar(SnackBar(content: Text(text)));
+}
+
+///Rough and maybe bad estimate for font size to be close to [pixels] in height.
+double pixelsToFontSizeEstimate(double pixels) {
+  return pixels / 16.0 * 12.0;
 }
