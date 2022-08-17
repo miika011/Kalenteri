@@ -237,6 +237,10 @@ class Date {
     return DateTime(year, month, day);
   }
 
+  bool get isToday {
+    return this == Date.fromDateTime(DateTime.now());
+  }
+
   Weekday get weekdayEnum {
     final weekDayIndex =
         toDateTime().weekday - 1; // DateTime weekdays are [1,7]

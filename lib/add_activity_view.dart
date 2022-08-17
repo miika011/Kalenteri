@@ -57,7 +57,7 @@ class _ActivityTextDialogState extends _AddActivityPageState {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Color.fromARGB(223, 255, 255, 255),
+      color: const Color.fromARGB(223, 255, 255, 255),
       child: Padding(
           padding: EdgeInsets.symmetric(vertical: verticalPaddingAmount),
           child: SingleChildScrollView(
@@ -331,7 +331,7 @@ class _AddActivityPageState extends State<AddActivityPage> {
       final persistentFile = imageFile?.copySync(persistentPath);
       final Activity activity = Activity(
           date: widget.date,
-          label: activityDescription,
+          text: activityDescription,
           imageFile: persistentFile);
       if (mounted) {
         Navigator.of(context).pop(activity);
@@ -589,32 +589,29 @@ class _AddActivityInLandscape extends StatelessWidget {
             DateWidget(
                 date: date,
                 fontSize: MediaQuery.of(context).size.height * 0.065),
-            Stack(
-              clipBehavior: Clip.none,
+            Row(
               children: [
-                Positioned(
-                  right: -sizeForGalleryCameraButtons(context).width,
-                  child: Column(
-                    children: [
-                      SizedBox(
-                          width: sizeForGalleryCameraButtons(context).width,
-                          height: sizeForGalleryCameraButtons(context).height,
-                          child: pageState.galleryButton),
-                      SizedBox(
-                          width: sizeForGalleryCameraButtons(context).width,
-                          height: sizeForGalleryCameraButtons(context).height,
-                          child: pageState.cameraButton)
-                    ],
+                Padding(
+                  padding: paddingForTextBox(context),
+                  child: SizedBox(
+                    width: sizeForTextBox(context).width,
+                    height: sizeForTextBox(context).height,
+                    child: pageState.textBox(
+                        fontSize: MediaQuery.of(context).size.height * 0.06),
                   ),
                 ),
-                Padding(
-                    padding: paddingForTextBox(context),
-                    child: SizedBox(
-                      width: sizeForTextBox(context).width,
-                      height: sizeForTextBox(context).height,
-                      child: pageState.textBox(
-                          fontSize: MediaQuery.of(context).size.height * 0.06),
-                    )),
+                Column(
+                  children: [
+                    SizedBox(
+                        width: sizeForGalleryCameraButtons(context).width,
+                        height: sizeForGalleryCameraButtons(context).height,
+                        child: pageState.galleryButton),
+                    SizedBox(
+                        width: sizeForGalleryCameraButtons(context).width,
+                        height: sizeForGalleryCameraButtons(context).height,
+                        child: pageState.cameraButton)
+                  ],
+                ),
               ],
             ),
           ],
@@ -638,8 +635,11 @@ class _AddActivityInLandscape extends StatelessWidget {
   }
 
   EdgeInsets paddingForTextBox(BuildContext context) {
-    return EdgeInsets.symmetric(
-        vertical: MediaQuery.of(context).size.height * 0.01);
+    final verticalPaddingAmount = MediaQuery.of(context).size.height * 0.01;
+    return EdgeInsets.only(
+        top: verticalPaddingAmount,
+        bottom: verticalPaddingAmount,
+        left: sizeForGalleryCameraButtons(context).width);
   }
 
   Size sizeForGalleryCameraButtons(BuildContext context) {
@@ -658,7 +658,7 @@ class _AddActivityInLandscape extends StatelessWidget {
       MediaQuery.of(context).size.height * 0.4;
 
   double horizontalPaddingForAcceptCancelButtons(BuildContext context) =>
-      MediaQuery.of(context).size.width * 0.04;
+      0; //MediaQuery.of(context).size.width * 0.04;
 
   Size sizeForTextBox(BuildContext context) => Size(
       MediaQuery.of(context).size.width * 0.44,

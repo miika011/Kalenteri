@@ -28,16 +28,12 @@ class _WeekWidgetState extends State<WeekWidget> {
 
   @override
   Widget build(BuildContext context) {
+    layout = MediaQuery.of(context).orientation == Orientation.landscape
+        ? LayoutForLandscape()
+        : LayoutForPortrait();
     return Scaffold(
       body: SafeArea(
-        child: PageChanger(
-            onForward: () {
-              showSnack(context, "Scrolling forward");
-            },
-            onBackward: () {
-              showSnack(context, "Scrolling backward");
-            },
-            child: buildWeekView(context)),
+        child: buildWeekView(context),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => setState(
@@ -55,7 +51,7 @@ class _WeekWidgetState extends State<WeekWidget> {
       children: [
         SizedBox(
           width: MediaQuery.of(context).size.width,
-          height: headerHeight(context),
+          height: layout.headerHeight(context),
           child: buildHeaderRowForWeek(
             widget.dayInTheWeek,
           ),
@@ -68,28 +64,21 @@ class _WeekWidgetState extends State<WeekWidget> {
     );
   }
 
-  double headerHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.08;
-  }
-
   Widget buildHeaderRowForWeek(Date dayInTheWeek) {
     final row = Row(
-      children: MondayToSunday(dayInTheWeek)
-          .map(
-            (date) => Expanded(
-              child: Container(
-                decoration: decorationForHeader(date),
-                child: DayHeaderWidget(
-                  date,
-                  textStyle: GoogleFonts.getFont(
-                    "Cabin Sketch",
-                    fontSize: pixelsToFontSizeEstimate(headerHeight(context)),
-                  ),
-                ),
-              ),
+      children: MondayToSunday(dayInTheWeek).map((date) {
+        TextStyle textStyle =
+            layout.headerTextStyle(context: context, date: date);
+        return Expanded(
+          child: Container(
+            decoration: layout.headerDecoration(date),
+            child: DayHeaderWidget(
+              date,
+              textStyle: textStyle,
             ),
-          )
-          .toList(),
+          ),
+        );
+      }).toList(),
     );
     return row;
   }
@@ -116,44 +105,40 @@ class _WeekWidgetState extends State<WeekWidget> {
     List<List<Widget>> gridRows =
         generateGridRows(dayInTheWeek, context: context);
 
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      itemCount: gridRows.length,
-      itemBuilder: ((context, index) {
-        return AnimatedContainer(
-          width: MediaQuery.of(context).size.width,
-          height: index.isEven
-              ? (_isAddingActivities
-                  ? addButtonEnabledHeight(context)
-                  : addButtonDisabledHeight(context))
-              : (_isAddingActivities
-                  ? activityHeightWhenAdding(context)
-                  : activityHeight(context)),
-          duration: WeekWidget.addActivityTransitionDuration,
-          curve: Curves.easeInBack,
-          child: Row(
-            children: gridRows[index],
-          ),
-        );
-      }),
-    );
-  }
-
-  double addButtonEnabledHeight(BuildContext context) {
-    return addButtonDisabledHeight(context) * 4;
-  }
-
-  double addButtonDisabledHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.015;
-  }
-
-  double activityHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.33;
-  }
-
-  double activityHeightWhenAdding(BuildContext context) {
-    return activityHeight(context) +
-        (addButtonDisabledHeight(context) - addButtonEnabledHeight(context));
+    return NotificationListener(
+        onNotification: (notification) {
+          if (notification is ScrollStartNotification) {
+            setState(() {
+              _isScrolling = true;
+            });
+          } else if (notification is ScrollEndNotification) {
+            setState(() {
+              _isScrolling = false;
+            });
+          }
+          return false;
+        },
+        child: ListView.builder(
+          //physics: const BouncingScrollPhysics(),
+          itemCount: gridRows.length,
+          itemBuilder: ((context, index) {
+            return AnimatedContainer(
+              width: MediaQuery.of(context).size.width,
+              height: index.isEven
+                  ? (_isAddingActivities
+                      ? layout.addButtonEnabledHeight(context)
+                      : layout.addButtonDisabledHeight(context))
+                  : (_isAddingActivities
+                      ? layout.activityHeightWhenAdding(context)
+                      : layout.activityHeight(context)),
+              duration: WeekWidget.addActivityTransitionDuration,
+              curve: Curves.easeInBack,
+              child: Row(
+                children: gridRows[index],
+              ),
+            );
+          }),
+        ));
   }
 
   List<List<Widget>> generateGridRows(Date dayInTheWeek,
@@ -180,26 +165,38 @@ class _WeekWidgetState extends State<WeekWidget> {
 
   Widget generateActivityWidget({required Date date, required int index}) {
     final activitiesForDay = LogBook().activitiesForDate(date);
-    Widget? child;
-    Activity? activity =
-        index < activitiesForDay.length ? activitiesForDay[index] : null;
-
-    child = ActivityWidget(
-      activity,
-      headerText: (index + 1).toString(),
+    Widget child;
+    Activity activity = index < activitiesForDay.length
+        ? activitiesForDay[index]
+        : Activity(date: date);
+    final headerText = (index + 1).toString();
+    child = Stack(
+      children: [
+        ActivityWidget(
+          activity,
+          headerText: headerText,
+        ),
+        AnimatedOpacity(
+            duration: const Duration(milliseconds: 400),
+            opacity: _isScrolling ? 1 : 0,
+            child: SizedBox(
+              height: layout.activityHeight(context) * 0.2,
+              child: ActivityHeaderWidget(headerText: headerText),
+            )),
+      ],
     );
 
     return Container(
       //padding: EdgeInsets.zero,
-      decoration: decorationForActivity(date),
-      child: SizedBox(height: activityHeight(context), child: child),
+      decoration: layout.activityDecoration(date),
+      child: SizedBox(height: layout.activityHeight(context), child: child),
     );
   }
 
   Widget generateAddActivityButton({required Date date, required int index}) {
     if (_isAddingActivities) {
       return ElevatedButton(
-        style: style,
+        style: layout.addButtonStyle,
         onPressed: () async {
           final Activity? activity = await Navigator.push<Activity?>(
             context,
@@ -218,74 +215,49 @@ class _WeekWidgetState extends State<WeekWidget> {
           }
         },
         child: Ink(
-          decoration: decorationForAddActivityButton,
+          decoration: layout.addButtonDecoration,
           child: AddActivityButton(
-            iconSize: addButtonIconSize(context),
+            iconSize: layout.addButtonIconSize(context),
           ),
         ),
       );
     } else {
       return Container(
-        decoration: decorationForAddActivityButton,
+        decoration: layout.addButtonDecoration,
       );
     }
   }
 
-  double addButtonIconSize(BuildContext context) {
-    return addButtonDisabledHeight(context) * 1.75;
-  }
+  bool _isAddingActivities = false;
+  bool _isScrolling = false;
 
-  Decoration decorationForHeader(Date date) {
-    final bgColor = backgroundColorForHeader(date);
-    return decorationForTile(bgColor);
-  }
+  late Layout layout;
+}
 
-  Decoration decorationForActivity(Date date) {
-    final bgColor = backgroundColorForActivity(date);
-    return decorationForTile(bgColor);
-  }
+class ActivityHeaderWidget extends StatelessWidget {
+  const ActivityHeaderWidget({
+    Key? key,
+    required this.headerText,
+  }) : super(key: key);
 
-  BoxDecoration decorationForTile(Color bgColor) {
-    return BoxDecoration(
-      color: bgColor,
-      border: Border.all(color: bgColor.factorBy(WeekWidget.borderShadeFactor)),
+  final String headerText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(boxShadow: [
+        BoxShadow(color: Color.fromARGB(160, 255, 255, 255), blurRadius: 3)
+      ]),
+      margin: const EdgeInsets.only(bottom: 3),
+      child: Center(
+        child: Text(
+          headerText,
+          style: const TextStyle(
+              fontSize: 20, color: Color.fromARGB(255, 59, 62, 65)),
+        ),
+      ),
     );
   }
-
-  Decoration get decorationForAddActivityButton {
-    final darkerRed =
-        (backGroundColorForAddButton.red * WeekWidget.borderShadeFactor)
-            .round();
-    final darkerGreen =
-        (backGroundColorForAddButton.green * WeekWidget.borderShadeFactor)
-            .round();
-    final darkerBlue =
-        (backGroundColorForAddButton.blue * WeekWidget.borderShadeFactor)
-            .round();
-    final darkerShade = Color.fromARGB(255, darkerRed, darkerGreen, darkerBlue);
-    final gradient = LinearGradient(
-        colors: [darkerShade, backGroundColorForAddButton, darkerShade],
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter);
-    return BoxDecoration(gradient: gradient);
-  }
-
-  get backGroundColorForAddButton {
-    return const Color(0xFFDDE2E2);
-  }
-
-  ButtonStyle get style {
-    return ButtonStyle(
-        shape: MaterialStateProperty.all<OutlinedBorder>(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(0.0),
-          ),
-        ),
-        padding:
-            MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.zero));
-  }
-
-  bool _isAddingActivities = false;
 }
 
 class PageChanger extends StatefulWidget {
@@ -362,53 +334,68 @@ class DayHeaderWidget extends StatelessWidget {
 }
 
 class ActivityWidget extends StatelessWidget {
-  const ActivityWidget(this._activity, {Key? key, String? headerText})
-      : headerText = headerText ?? "",
+  const ActivityWidget(this.activity, {Key? key, String? headerText})
+      : _headerText = headerText,
         super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        Container(
-          decoration: const BoxDecoration(boxShadow: [
-            BoxShadow(color: Color.fromARGB(55, 0, 0, 0), blurRadius: 3)
-          ]),
-          margin: const EdgeInsets.only(bottom: 3),
-          child: Center(
-            child: Text(
-              headerText,
-              style: const TextStyle(
-                  fontSize: 20, color: Color.fromARGB(255, 59, 62, 65)),
+    return Material(
+      color: backgroundColorForActivity(activity.date),
+      child: Column(
+        //physics: const NeverScrollableScrollPhysics(),
+        children: [
+          // Container(
+          //   decoration: const BoxDecoration(boxShadow: [
+          //     BoxShadow(color: Color.fromARGB(55, 0, 0, 0), blurRadius: 3)
+          //   ]),
+          //   margin: const EdgeInsets.only(bottom: 3),
+          //   child: Center(
+          //     child: Text(
+          //       headerText,
+          //       style: const TextStyle(
+          //           fontSize: 20, color: Color.fromARGB(255, 59, 62, 65)),
+          //     ),
+          //   ),
+          // ),
+          Flexible(
+              flex: hasImage ? 3 : 0,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(child: imageWidget),
+              )),
+          Flexible(
+            flex: hasText ? 2 : 0,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Text(text),
             ),
           ),
-        ),
-        Align(
-          alignment: Alignment.topCenter,
-          child: image,
-        ),
-        Text(label),
-      ],
+        ],
+      ),
     );
   }
 
-  String get label => _activity != null ? _activity!.label : "";
+  String get text => activity.text;
+  bool get hasText => activity.text.trim() != "";
 
-  Widget get image => hasImage
+  String get headerText => _headerText ?? "";
+
+  Widget get imageWidget => hasImage
       ? Image(
-          image: FileImage(_activity!.imageFile!),
+          image: FileImage(activity.imageFile!),
         )
       : Container();
 
-  bool get hasImage => _activity?.imageFile != null;
+  bool get hasImage => activity.imageFile != null;
 
   TextStyle get textStyle {
     return const TextStyle(fontFamily: "Unna");
   }
 
-  final Activity? _activity;
-  final String headerText;
+  final Activity activity;
+
+  final String? _headerText;
 }
 
 class AddActivityButton extends StatelessWidget {
@@ -443,23 +430,176 @@ class AddActivityButton extends StatelessWidget {
   final double iconSize;
 }
 
+abstract class Layout {
+  double headerHeight(BuildContext context);
+  Decoration headerDecoration(Date date);
+  TextStyle headerTextStyle(
+      {required BuildContext context, required Date date});
+
+  double activityHeight(BuildContext context);
+  double activityHeightWhenAdding(BuildContext context);
+  Decoration activityDecoration(Date date);
+
+  BoxDecoration tileDecoration(Color bgColor);
+
+  Decoration get addButtonDecoration;
+  double addButtonIconSize(BuildContext context);
+  double addButtonEnabledHeight(BuildContext context);
+  double addButtonDisabledHeight(BuildContext context);
+  ButtonStyle get addButtonStyle;
+  get addButtonBackgroundColor {
+    return const Color(0xFFDDE2E2);
+  }
+}
+
+class LayoutForLandscape extends Layout {
+  @override
+  double headerHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.08;
+  }
+
+  @override
+  TextStyle headerTextStyle(
+      {required BuildContext context, required Date date}) {
+    final decoration = date.isToday ? TextDecoration.underline : null;
+    final normalFontSize =
+        pixelsToFontSizeEstimate(headerHeight(context) * 0.9);
+    final textStyle = GoogleFonts.getFont(
+      "Cabin Sketch",
+      decoration: decoration,
+      fontSize: date.isToday ? normalFontSize * 1.3 : normalFontSize,
+    );
+    return textStyle;
+  }
+
+  @override
+  Decoration headerDecoration(Date date) {
+    final bgColor = backgroundColorForHeader(date);
+    return tileDecoration(bgColor);
+  }
+
+  @override
+  BoxDecoration tileDecoration(Color bgColor) {
+    return BoxDecoration(
+      color: bgColor,
+      border: Border.all(color: bgColor.factorBy(WeekWidget.borderShadeFactor)),
+    );
+  }
+
+  @override
+  double activityHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.33;
+  }
+
+  @override
+  double activityHeightWhenAdding(BuildContext context) {
+    return activityHeight(context) +
+        (addButtonDisabledHeight(context) - addButtonEnabledHeight(context));
+  }
+
+  @override
+  Decoration activityDecoration(Date date) {
+    final bgColor = backgroundColorForActivity(date);
+    return tileDecoration(bgColor);
+  }
+
+  @override
+  Decoration get addButtonDecoration {
+    final darkerRed =
+        (addButtonBackgroundColor.red * WeekWidget.borderShadeFactor).round();
+    final darkerGreen =
+        (addButtonBackgroundColor.green * WeekWidget.borderShadeFactor).round();
+    final darkerBlue =
+        (addButtonBackgroundColor.blue * WeekWidget.borderShadeFactor).round();
+    final darkerShade = Color.fromARGB(255, darkerRed, darkerGreen, darkerBlue);
+    final gradient = LinearGradient(
+        colors: [darkerShade, addButtonBackgroundColor, darkerShade],
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter);
+    return BoxDecoration(gradient: gradient);
+  }
+
+  @override
+  ButtonStyle get addButtonStyle {
+    return ButtonStyle(
+        shape: MaterialStateProperty.all<OutlinedBorder>(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(0.0),
+          ),
+        ),
+        padding:
+            MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.zero));
+  }
+
+  @override
+  double addButtonEnabledHeight(BuildContext context) {
+    return addButtonDisabledHeight(context) * 4;
+  }
+
+  @override
+  double addButtonDisabledHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.015;
+  }
+
+  @override
+  double addButtonIconSize(BuildContext context) {
+    return addButtonDisabledHeight(context) * 1.75;
+  }
+
+  @override
+  get addButtonBackgroundColor {
+    return const Color(0xFFDDE2E2);
+  }
+}
+
+class LayoutForPortrait extends LayoutForLandscape {
+  @override
+  double headerHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.075;
+  }
+
+  @override
+  TextStyle headerTextStyle(
+      {required BuildContext context, required Date date}) {
+    var landscapeStyle = super.headerTextStyle(context: context, date: date);
+    final portraitFontSize =
+        pixelsToFontSizeEstimate(headerHeight(context) * 0.4);
+    return landscapeStyle.copyWith(fontSize: portraitFontSize);
+  }
+
+  @override
+  double activityHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.2;
+  }
+
+  @override
+  double addButtonEnabledHeight(BuildContext context) {
+    return addButtonDisabledHeight(context) * 8;
+  }
+
+  @override
+  double addButtonDisabledHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.005;
+  }
+}
+
 //TEST ACTIVITIES ============>
 const mauno = Image(image: AssetImage("assets/images/mauno.png"));
 
 final List<Activity> testActivities = () {
   final a = [
-    Activity(label: "Eka", date: Date.fromDateTime(DateTime.now())),
+    Activity(text: "Eka", date: Date.fromDateTime(DateTime.now())),
     Activity(
-        label:
+        text:
             "Toka ja ihan helvetin pitkä mussutus jostain ihan oudosta asiasta",
         date: Date.fromDateTime(DateTime.now())),
     Activity(
-      label: "Kolmas (Mauno)",
+      text: "Kolmas (Mauno)",
       date: Date.fromDateTime(DateTime.now()),
       imageFile: File("assets/images/mauno.png"),
     ),
     Activity(
-      label: "Neljäs",
+      text: "Neljäs",
       date: Date.fromDateTime(DateTime.now()),
     )
   ];
@@ -471,7 +611,7 @@ final List<Activity> testActivities = () {
     final repeatingActivities = a
         .map((act) => Activity(
             date: Date.fromDateTime(weeksMonday.add(Duration(days: i))),
-            label: act.label,
+            text: act.text,
             imageFile: act.imageFile))
         .toList();
     ret.addAll(List.generate(repeatingActivities.length,

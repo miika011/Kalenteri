@@ -1,3 +1,9 @@
+# Media files
+*.svg
+*.png
+*.jpg
+*.mp4
+
 # Miscellaneous
 *.class
 *.log

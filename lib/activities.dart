@@ -6,7 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class Activity {
-  Activity({required this.date, required this.label, this.imageFile});
+  Activity({required this.date, String? text, this.imageFile})
+      : text = text ?? "";
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     final date = json["date"];
@@ -14,14 +15,14 @@ class Activity {
     final imageFilePath = json["imageFilePath"];
     final imageFile = imageFilePath != null ? File(imageFilePath) : null;
     return Activity(
-        date: Date.fromJson(date), label: label, imageFile: imageFile);
+        date: Date.fromJson(date), text: label, imageFile: imageFile);
   }
 
   Map<String, dynamic> toJson() =>
-      {"date": date, "label": label, "imageFilePath": imageFile?.path};
+      {"date": date, "label": text, "imageFilePath": imageFile?.path};
 
   Date date;
-  String label;
+  String text;
   File? imageFile;
 }
 
