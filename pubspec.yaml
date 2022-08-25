@@ -31,8 +31,8 @@ dependencies:
     sdk: flutter
   list_extensions:
     path: C:/Users/miika/programming/dart/lib/list_extensions
-  google_fonts:
   image_picker:
+  image:
   path_provider:
   gallery_saver:
   shared_preferences:
@@ -73,6 +73,14 @@ flutter:
     - assets/
     - assets/images/
     - assets/icons/svg/
+  
+  
+  fonts:
+    - family: Cabin Sketch
+      fonts:
+        - asset: fonts/CabinSketch-Regular.ttf
+        - asset: fonts/CabinSketch-Bold.ttf
+          
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.

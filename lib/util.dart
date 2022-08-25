@@ -304,3 +304,22 @@ showSnack(BuildContext context, String text) {
 double pixelsToFontSizeEstimate(double pixels) {
   return pixels / 16.0 * 12.0;
 }
+
+T clamp<T extends Comparable>(T value, T min, T max) {
+  if (value.compareTo(max) > 0) {
+    return max;
+  } else if (value.compareTo(min) < 0) {
+    return min;
+  }
+  return value;
+}
+
+abstract class Singleton<T> {
+  T? _singleInstance;
+
+  T buildNew();
+
+  T getInstance() {
+    return _singleInstance ?? buildNew();
+  }
+}

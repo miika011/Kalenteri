@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:kalenteri/activities.dart';
 import 'package:kalenteri/add_activity_view.dart';
@@ -177,6 +176,7 @@ class _WeekWidgetState extends State<WeekWidget> {
           headerText: headerText,
         ),
         AnimatedOpacity(
+            //
             duration: const Duration(milliseconds: 400),
             opacity: _isScrolling ? 1 : 0,
             child: SizedBox(
@@ -194,8 +194,9 @@ class _WeekWidgetState extends State<WeekWidget> {
   }
 
   Widget generateAddActivityButton({required Date date, required int index}) {
-    if (_isAddingActivities) {
-      return ElevatedButton(
+    if (_isAddingActivities &&
+        index <= LogBook().activitiesForDate(date).length) {
+      return OutlinedButton(
         style: layout.addButtonStyle,
         onPressed: () async {
           final Activity? activity = await Navigator.push<Activity?>(
@@ -343,54 +344,50 @@ class ActivityWidget extends StatelessWidget {
     return Material(
       color: backgroundColorForActivity(activity.date),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         //physics: const NeverScrollableScrollPhysics(),
         children: [
-          // Container(
-          //   decoration: const BoxDecoration(boxShadow: [
-          //     BoxShadow(color: Color.fromARGB(55, 0, 0, 0), blurRadius: 3)
-          //   ]),
-          //   margin: const EdgeInsets.only(bottom: 3),
-          //   child: Center(
-          //     child: Text(
-          //       headerText,
-          //       style: const TextStyle(
-          //           fontSize: 20, color: Color.fromARGB(255, 59, 62, 65)),
-          //     ),
-          //   ),
-          // ),
           Flexible(
+              fit: FlexFit.loose,
               flex: hasImage ? 3 : 0,
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: Container(child: imageWidget),
-              )),
-          Flexible(
-            flex: hasText ? 2 : 0,
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Text(text),
-            ),
-          ),
+              child:
+                  Align(alignment: Alignment.topCenter, child: _imageWidget)),
+          Flexible(flex: hasText ? 1 : 0, child: _textWidget),
         ],
       ),
     );
   }
 
-  String get text => activity.text;
-  bool get hasText => activity.text.trim() != "";
+  String get text => activity.text.trim();
+  bool get hasText => text != "";
 
   String get headerText => _headerText ?? "";
 
-  Widget get imageWidget => hasImage
-      ? Image(
-          image: FileImage(activity.imageFile!),
-        )
-      : Container();
+  Widget get _imageWidget {
+    return activity.imageFile != null
+        ? Image(
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) {
+                return child;
+              } else {
+                return const CircularProgressIndicator();
+              }
+            },
+            image: FileImage(activity.imageFile!),
+          )
+        : Container();
+  }
+
+  Widget get _textWidget => Text(
+        text,
+        style: textStyle,
+      );
 
   bool get hasImage => activity.imageFile != null;
 
   TextStyle get textStyle {
-    return const TextStyle(fontFamily: "Unna");
+    return const TextStyle(fontFamily: "Unna", overflow: TextOverflow.ellipsis);
   }
 
   final Activity activity;
@@ -406,7 +403,7 @@ class AddActivityButton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
-          width: 2,
+          width: 1.0,
           color: const Color(0xFF7A8888),
         ),
       ),
@@ -431,24 +428,83 @@ class AddActivityButton extends StatelessWidget {
 }
 
 abstract class Layout {
-  double headerHeight(BuildContext context);
-  Decoration headerDecoration(Date date);
-  TextStyle headerTextStyle(
-      {required BuildContext context, required Date date});
-
-  double activityHeight(BuildContext context);
-  double activityHeightWhenAdding(BuildContext context);
-  Decoration activityDecoration(Date date);
-
-  BoxDecoration tileDecoration(Color bgColor);
-
-  Decoration get addButtonDecoration;
   double addButtonIconSize(BuildContext context);
   double addButtonEnabledHeight(BuildContext context);
   double addButtonDisabledHeight(BuildContext context);
-  ButtonStyle get addButtonStyle;
+  double activityHeight(BuildContext context);
+  double headerHeight(BuildContext context);
+
+  Decoration headerDecoration(Date date) {
+    final bgColor = backgroundColorForHeader(date);
+    return tileDecoration(bgColor);
+  }
+
+  TextStyle headerTextStyle(
+      {required BuildContext context, required Date date}) {
+    final decoration = date.isToday ? TextDecoration.underline : null;
+    final normalFontSize =
+        pixelsToFontSizeEstimate(headerHeight(context) * 0.9);
+    final textStyle = TextStyle(
+      fontFamily: "Cabin Sketch",
+      decoration: decoration,
+      fontSize: date.isToday ? normalFontSize * 1.3 : normalFontSize,
+    );
+    return textStyle;
+  }
+
+  double activityHeightWhenAdding(BuildContext context) {
+    return activityHeight(context) +
+        (addButtonDisabledHeight(context) - addButtonEnabledHeight(context));
+  }
+
+  Decoration activityDecoration(Date date) {
+    final bgColor = backgroundColorForActivity(date);
+    return tileDecoration(bgColor);
+  }
+
+  BoxDecoration tileDecoration(Color bgColor) {
+    return BoxDecoration(
+      color: bgColor,
+      border: Border.all(color: bgColor.factorBy(WeekWidget.borderShadeFactor)),
+    );
+  }
+
+  Decoration get addButtonDecoration {
+    Color darkerShade = adjustedBrightness(addButtonBackgroundColor,
+        shadeFactor: WeekWidget.borderShadeFactor);
+    final gradient = LinearGradient(
+        colors: [darkerShade, addButtonBackgroundColor, darkerShade],
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter);
+    return BoxDecoration(gradient: gradient);
+  }
+
+  Color adjustedBrightness(Color c, {required double shadeFactor}) {
+    final adjustedRed = _clampColorValue((c.red * shadeFactor).round());
+    final adjustedGreen = _clampColorValue((c.green * shadeFactor).round());
+    final adjustedBlue = _clampColorValue((c.blue * shadeFactor).round());
+    final adjustedColor =
+        Color.fromARGB(255, adjustedRed, adjustedGreen, adjustedBlue);
+    return adjustedColor;
+  }
+
+  int _clampColorValue(int colorValue) {
+    return clamp(colorValue, 0, 255);
+  }
+
   get addButtonBackgroundColor {
     return const Color(0xFFDDE2E2);
+  }
+
+  ButtonStyle get addButtonStyle {
+    return ButtonStyle(
+        shape: MaterialStateProperty.all<OutlinedBorder>(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(0.0),
+          ),
+        ),
+        padding:
+            MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.zero));
   }
 }
 
@@ -459,76 +515,8 @@ class LayoutForLandscape extends Layout {
   }
 
   @override
-  TextStyle headerTextStyle(
-      {required BuildContext context, required Date date}) {
-    final decoration = date.isToday ? TextDecoration.underline : null;
-    final normalFontSize =
-        pixelsToFontSizeEstimate(headerHeight(context) * 0.9);
-    final textStyle = GoogleFonts.getFont(
-      "Cabin Sketch",
-      decoration: decoration,
-      fontSize: date.isToday ? normalFontSize * 1.3 : normalFontSize,
-    );
-    return textStyle;
-  }
-
-  @override
-  Decoration headerDecoration(Date date) {
-    final bgColor = backgroundColorForHeader(date);
-    return tileDecoration(bgColor);
-  }
-
-  @override
-  BoxDecoration tileDecoration(Color bgColor) {
-    return BoxDecoration(
-      color: bgColor,
-      border: Border.all(color: bgColor.factorBy(WeekWidget.borderShadeFactor)),
-    );
-  }
-
-  @override
   double activityHeight(BuildContext context) {
     return MediaQuery.of(context).size.height * 0.33;
-  }
-
-  @override
-  double activityHeightWhenAdding(BuildContext context) {
-    return activityHeight(context) +
-        (addButtonDisabledHeight(context) - addButtonEnabledHeight(context));
-  }
-
-  @override
-  Decoration activityDecoration(Date date) {
-    final bgColor = backgroundColorForActivity(date);
-    return tileDecoration(bgColor);
-  }
-
-  @override
-  Decoration get addButtonDecoration {
-    final darkerRed =
-        (addButtonBackgroundColor.red * WeekWidget.borderShadeFactor).round();
-    final darkerGreen =
-        (addButtonBackgroundColor.green * WeekWidget.borderShadeFactor).round();
-    final darkerBlue =
-        (addButtonBackgroundColor.blue * WeekWidget.borderShadeFactor).round();
-    final darkerShade = Color.fromARGB(255, darkerRed, darkerGreen, darkerBlue);
-    final gradient = LinearGradient(
-        colors: [darkerShade, addButtonBackgroundColor, darkerShade],
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter);
-    return BoxDecoration(gradient: gradient);
-  }
-
-  @override
-  ButtonStyle get addButtonStyle {
-    return ButtonStyle(
-        shape: MaterialStateProperty.all<OutlinedBorder>(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(0.0),
-          ),
-        ),
-        padding:
-            MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.zero));
   }
 
   @override
@@ -543,16 +531,11 @@ class LayoutForLandscape extends Layout {
 
   @override
   double addButtonIconSize(BuildContext context) {
-    return addButtonDisabledHeight(context) * 1.75;
-  }
-
-  @override
-  get addButtonBackgroundColor {
-    return const Color(0xFFDDE2E2);
+    return addButtonDisabledHeight(context) * 4.0;
   }
 }
 
-class LayoutForPortrait extends LayoutForLandscape {
+class LayoutForPortrait extends Layout {
   @override
   double headerHeight(BuildContext context) {
     return MediaQuery.of(context).size.height * 0.075;
@@ -569,7 +552,7 @@ class LayoutForPortrait extends LayoutForLandscape {
 
   @override
   double activityHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.2;
+    return MediaQuery.of(context).size.height * 0.1;
   }
 
   @override
@@ -580,6 +563,11 @@ class LayoutForPortrait extends LayoutForLandscape {
   @override
   double addButtonDisabledHeight(BuildContext context) {
     return MediaQuery.of(context).size.height * 0.005;
+  }
+
+  @override
+  double addButtonIconSize(BuildContext context) {
+    return addButtonDisabledHeight(context) * 5.0;
   }
 }
 

@@ -52,7 +52,7 @@ class _AppHomeState extends State<AppHome> {
 ///to achieve cheesy bidirectional scrolling.
 class WeekPageController extends PageController {
   static const thisWeekPageIndex =
-      0x7FFFFFFF >> 1; //use signed 32bit for compatibility.
+      0x7FFFFFFF >> 1; //Assume signed 32bit for compatibility.
 
   @override
   int get initialPage => thisWeekPageIndex;
