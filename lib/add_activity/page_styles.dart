@@ -17,5 +17,6 @@ class PageStyleForPortrait extends PageStyle {}
 class PageStyleForLandscape extends PageStyle {}
 
 class PageStyleForTextDialog extends PageStyle {
-  PageStyleForTextDialog() : super(autofocusText: true);
+  PageStyleForTextDialog({String? initialText})
+      : super(autofocusText: true, initialText: initialText);
 }

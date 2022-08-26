@@ -198,22 +198,24 @@ class _WeekWidgetState extends State<WeekWidget> {
         index <= LogBook().activitiesForDate(date).length) {
       return OutlinedButton(
         style: layout.addButtonStyle,
-        onPressed: () async {
-          final Activity? activity = await Navigator.push<Activity?>(
+        onPressed: () {
+          Navigator.push<Activity?>(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  AddActivityPage(date: date, activityIndex: index),
+              builder: (context) => AddActivityPage(date: date),
             ),
+          ).then(
+            (activity) {
+              if (activity != null) {
+                setState(
+                  () {
+                    LogBook().logActivity(activity, index);
+                    LogBook.save();
+                  },
+                );
+              }
+            },
           );
-          if (activity != null) {
-            setState(
-              () {
-                LogBook().logActivity(activity, index);
-                LogBook.save();
-              },
-            );
-          }
         },
         child: Ink(
           decoration: layout.addButtonDecoration,
@@ -259,52 +261,6 @@ class ActivityHeaderWidget extends StatelessWidget {
       ),
     );
   }
-}
-
-class PageChanger extends StatefulWidget {
-  const PageChanger(
-      {Key? key,
-      required this.onForward,
-      required this.onBackward,
-      required this.child})
-      : super(key: key);
-
-  @override
-  State<PageChanger> createState() => _PageChangerState();
-
-  final VoidCallback onForward;
-  final VoidCallback onBackward;
-  final Widget child;
-}
-
-class _PageChangerState extends State<PageChanger> {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragStart: (details) {
-        _dragStart = details.globalPosition;
-      },
-      onHorizontalDragUpdate: (details) {
-        final Offset offsetFromStart = Offset(
-            details.globalPosition.dx - _dragStart!.dx,
-            details.globalPosition.dy - _dragStart!.dy);
-
-        final scrollTreshold = MediaQuery.of(context).size.width * 0.1;
-        if (offsetFromStart.dx.abs() > scrollTreshold &&
-            offsetFromStart.dx.abs() > offsetFromStart.dy.abs() * 1.33) {
-          if (offsetFromStart.dx < 0) {
-            widget.onForward();
-          } else {
-            widget.onBackward();
-          }
-        }
-      },
-      child: widget.child,
-    );
-  }
-
-  Offset? _dragStart;
 }
 
 class DayHeaderWidget extends StatelessWidget {
@@ -365,7 +321,7 @@ class ActivityWidget extends StatelessWidget {
   String get headerText => _headerText ?? "";
 
   Widget get _imageWidget {
-    return activity.imageFile != null
+    return activity.imageFilePath != null
         ? Image(
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) {
@@ -374,7 +330,7 @@ class ActivityWidget extends StatelessWidget {
                 return const CircularProgressIndicator();
               }
             },
-            image: FileImage(activity.imageFile!),
+            image: FileImage(File(activity.imageFilePath!)),
           )
         : Container();
   }
@@ -384,7 +340,7 @@ class ActivityWidget extends StatelessWidget {
         style: textStyle,
       );
 
-  bool get hasImage => activity.imageFile != null;
+  bool get hasImage => activity.imageFilePath != null;
 
   TextStyle get textStyle {
     return const TextStyle(fontFamily: "Unna", overflow: TextOverflow.ellipsis);
@@ -584,7 +540,7 @@ final List<Activity> testActivities = () {
     Activity(
       text: "Kolmas (Mauno)",
       date: Date.fromDateTime(DateTime.now()),
-      imageFile: File("assets/images/mauno.png"),
+      imageFilePath: "assets/images/mauno.png",
     ),
     Activity(
       text: "Neljäs",
@@ -600,7 +556,7 @@ final List<Activity> testActivities = () {
         .map((act) => Activity(
             date: Date.fromDateTime(weeksMonday.add(Duration(days: i))),
             text: act.text,
-            imageFile: act.imageFile))
+            imageFilePath: act.imageFilePath))
         .toList();
     ret.addAll(List.generate(repeatingActivities.length,
         (index) => repeatingActivities[index % repeatingActivities.length],

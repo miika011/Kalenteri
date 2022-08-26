@@ -6,29 +6,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class Activity {
-  Activity({required this.date, String? text, this.imageFile})
+  Activity({required this.date, String? text, this.imageFilePath})
       : text = text ?? "";
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     final date = json["date"];
     final label = json["label"];
     final imageFilePath = json["imageFilePath"];
-    final imageFile = imageFilePath != null ? File(imageFilePath) : null;
     return Activity(
-        date: Date.fromJson(date), text: label, imageFile: imageFile);
+        date: Date.fromJson(date), text: label, imageFilePath: imageFilePath);
   }
 
   Map<String, dynamic> toJson() =>
-      {"date": date, "label": text, "imageFilePath": imageFile?.path};
+      {"date": date, "label": text, "imageFilePath": imageFilePath};
 
   Date date;
   String text;
-  File? imageFile;
+
+  String? imageFilePath;
 }
 
-/// Logbook (singleton) for logging activities
+/// Logbook for logging activities
 class LogBook {
   static LogBook _singleton = LogBook._internal({});
+
+  bool _isUpToDate = false;
+  final Map<Date, List<Activity>> _activities;
+
   LogBook._internal(this._activities);
 
   factory LogBook() => _singleton;
@@ -36,7 +40,7 @@ class LogBook {
   void logActivity(Activity activity, int index) {
     final activitiesForDay = _activities[activity.date] ??= [];
     index = min(index, activitiesForDay.length);
-    _activities[activity.date]!.insert(index, activity);
+    activitiesForDay.insert(index, activity);
     _singleton._isUpToDate = false;
   }
 
@@ -86,8 +90,4 @@ class LogBook {
     prefs.setString("logBook", jsonString);
     _singleton._isUpToDate = false;
   }
-
-  bool _isUpToDate = false;
-
-  final Map<Date, List<Activity>> _activities;
 }

@@ -46,7 +46,7 @@ class AddActivityController {
         unFocusText();
         break;
       case AcceptButtonStatus.acceptAndReturn:
-        final Object? value = getValue();
+        final value = getValue();
         Navigator.of(context).pop(value);
         break;
       default:
@@ -78,9 +78,7 @@ class AddActivityController {
           ActivityTextDialog(date: date, initialText: textValue),
     ))
         .then((newText) {
-      if (newText != null) {
-        setTextValue(newText);
-      }
+      setTextValue(newText ?? "");
     });
     unFocusText();
   }
@@ -181,7 +179,7 @@ class AddActivityController {
   }
 
   Activity getActivity() =>
-      Activity(date: date, text: textValue, imageFile: imageFile);
+      Activity(date: date, text: textValue, imageFilePath: imageFile?.path);
 }
 
 class TextDialogController extends AddActivityController {
@@ -190,19 +188,17 @@ class TextDialogController extends AddActivityController {
   @override
   void onTextFocus(BuildContext context) {
     // Don't call super if super spawns a new instance of this
+    updateAcceptButtonStatus();
   }
 
   @override
   Object? getValue() {
     return textValue;
   }
-
-  @override
-  PageStyle get pageStyle => PageStyleForTextDialog();
 }
 
 class DateWidget extends StatelessWidget {
-  DateWidget({Key? key, required this.date, required this.pageStyle})
+  const DateWidget({Key? key, required this.date, required this.pageStyle})
       : super(key: key);
 
   final Date date;

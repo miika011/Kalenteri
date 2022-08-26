@@ -13,7 +13,8 @@ class ActivityTextDialog extends StatelessWidget {
 
   ActivityTextDialog({Key? key, required this.date, String? initialText})
       : super(key: key) {
-    logicController.pageStyle.initialText = initialText;
+    logicController.pageStyle =
+        PageStyleForTextDialog(initialText: initialText);
   }
 
   @override
@@ -28,9 +29,10 @@ class ActivityTextDialog extends StatelessWidget {
             child: SingleChildScrollView(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Align(
-                    alignment: Alignment.center,
+                    alignment: Alignment.bottomLeft,
                     child: SizedBox(
                       width: sizeForAcceptCancelButtons(context).width,
                       height: sizeForAcceptCancelButtons(context).height,
@@ -106,8 +108,8 @@ class ActivityTextDialog extends StatelessWidget {
 
   Size sizeForTextBoxPortrait(BuildContext context) {
     double availableHeight = getAvailableHeight(context);
-    return Size(
-        MediaQuery.of(context).size.width * 0.55, availableHeight * 0.8);
+    return Size(MediaQuery.of(context).size.width * 0.55,
+        MediaQuery.of(context).size.height * 0.5);
   }
 
   double getAvailableHeight(BuildContext context) {
@@ -118,15 +120,15 @@ class ActivityTextDialog extends StatelessWidget {
   }
 }
 
+/// Input page to create new activities. Image files are temporary, so caller
+/// has to save the activity into permanent storage if needed
 class AddActivityPage extends StatefulWidget {
   const AddActivityPage({
     Key? key,
     required this.date,
-    required this.activityIndex,
   }) : super(key: key);
 
   final Date date;
-  final int activityIndex;
 
   @override
   State<StatefulWidget> createState() => _AddActivityPageState();
@@ -168,86 +170,81 @@ class _AddActivityInPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        body: Column(
-          children: [
-            Padding(
-              padding: paddingForImage(context),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: widthForImage(context),
-                  height: heightForImage(context),
-                  child: logicController.imageDisplay,
+    return Column(
+      children: [
+        Padding(
+          padding: paddingForImage(context),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: widthForImage(context),
+              height: heightForImage(context),
+              child: logicController.imageDisplay,
+            ),
+          ),
+        ),
+        logicController.dateWidget(date),
+        Padding(
+          padding: paddingForSecondRow(context),
+          child: Row(
+            children: [
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: paddingForCancelButton(context),
+                  child: SizedBox(
+                    width: sizeForCancelAcceptButtons(context).width,
+                    height: sizeForCancelAcceptButtons(context).height,
+                    child: logicController.cancelButton,
+                  ),
                 ),
               ),
-            ),
-            logicController.dateWidget(date),
-            Padding(
-              padding: paddingForSecondRow(context),
-              child: Row(
-                children: [
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: paddingForCancelButton(context),
-                      child: SizedBox(
-                        width: sizeForCancelAcceptButtons(context).width,
-                        height: sizeForCancelAcceptButtons(context).height,
-                        child: logicController.cancelButton,
-                      ),
-                    ),
+              Expanded(
+                child: Padding(
+                  padding: paddingForActivityTextBox(context),
+                  child: SizedBox(
+                    width: widthForActivityTextBox(context),
+                    child: logicController.textBox,
                   ),
-                  Expanded(
-                    child: Padding(
-                      padding: paddingForActivityTextBox(context),
-                      child: SizedBox(
-                        width: widthForActivityTextBox(context),
-                        child: logicController.textBox,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: paddingForAcceptButton(context),
-                    child: Align(
-                      alignment: Alignment.bottomRight,
-                      child: SizedBox(
-                        width: sizeForCancelAcceptButtons(context).width,
-                        height: sizeForCancelAcceptButtons(context).height,
-                        child: logicController.acceptButton,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-            Padding(
-              padding: paddingForThirdRow(context),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: paddingForCameraButton(context),
-                    child: SizedBox(
-                        width: sizeForCameraAndGalleryButtons(context).width,
-                        height: sizeForCameraAndGalleryButtons(context).height,
-                        child: logicController.cameraButton),
+              Padding(
+                padding: paddingForAcceptButton(context),
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: SizedBox(
+                    width: sizeForCancelAcceptButtons(context).width,
+                    height: sizeForCancelAcceptButtons(context).height,
+                    child: logicController.acceptButton,
                   ),
-                  Padding(
-                    padding: paddingForGalleryButton(context),
-                    child: SizedBox(
-                        width: sizeForCameraAndGalleryButtons(context).width,
-                        height: sizeForCameraAndGalleryButtons(context).height,
-                        child: logicController.galleryButton),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        Padding(
+          padding: paddingForThirdRow(context),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Padding(
+                padding: paddingForCameraButton(context),
+                child: SizedBox(
+                    width: sizeForCameraAndGalleryButtons(context).width,
+                    height: sizeForCameraAndGalleryButtons(context).height,
+                    child: logicController.cameraButton),
+              ),
+              Padding(
+                padding: paddingForGalleryButton(context),
+                child: SizedBox(
+                    width: sizeForCameraAndGalleryButtons(context).width,
+                    height: sizeForCameraAndGalleryButtons(context).height,
+                    child: logicController.galleryButton),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
