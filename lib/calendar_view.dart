@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'package:kalenteri/activities.dart';
-import 'package:kalenteri/add_activity_view.dart';
+import 'package:kalenteri/add_activity/add_activity_view.dart';
 import 'package:kalenteri/util.dart';
 
 class WeekWidget extends StatefulWidget {
