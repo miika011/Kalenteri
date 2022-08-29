@@ -7,6 +7,8 @@ import 'package:kalenteri/activities.dart';
 import 'package:kalenteri/add_activity/add_activity_view.dart';
 import 'package:kalenteri/util.dart';
 
+import 'image_manager.dart';
+
 class WeekWidget extends StatefulWidget {
   const WeekWidget(this.dayInTheWeek, {Key? key}) : super(key: key);
 
@@ -198,25 +200,7 @@ class _WeekWidgetState extends State<WeekWidget> {
         index <= LogBook().activitiesForDate(date).length) {
       return OutlinedButton(
         style: layout.addButtonStyle,
-        onPressed: () {
-          Navigator.push<Activity?>(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddActivityPage(date: date),
-            ),
-          ).then(
-            (activity) {
-              if (activity != null) {
-                setState(
-                  () {
-                    LogBook().logActivity(activity, index);
-                    LogBook.save();
-                  },
-                );
-              }
-            },
-          );
-        },
+        onPressed: () => onPressedAddActivity(date: date, index: index),
         child: Ink(
           decoration: layout.addButtonDecoration,
           child: AddActivityButton(
@@ -228,6 +212,22 @@ class _WeekWidgetState extends State<WeekWidget> {
       return Container(
         decoration: layout.addButtonDecoration,
       );
+    }
+  }
+
+  void onPressedAddActivity({required Date date, required int index}) async {
+    final newActivity = await Navigator.push<Activity?>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddActivityPage(date: date),
+      ),
+    );
+    if (newActivity != null) {
+      setState(() {
+        LogBook().logActivity(newActivity, index);
+      });
+      await newActivity.hashedImage.futureHash;
+      LogBook.save();
     }
   }
 
@@ -321,18 +321,10 @@ class ActivityWidget extends StatelessWidget {
   String get headerText => _headerText ?? "";
 
   Widget get _imageWidget {
-    return activity.imageFilePath != null
-        ? Image(
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) {
-                return child;
-              } else {
-                return const CircularProgressIndicator();
-              }
-            },
-            image: FileImage(File(activity.imageFilePath!)),
-          )
-        : Container();
+    if (activity.hashedImage.imageFilePath == null) return Container();
+    return Image(
+      image: FileImage(File(activity.hashedImage.imageFilePath!)),
+    );
   }
 
   Widget get _textWidget => Text(
@@ -340,7 +332,7 @@ class ActivityWidget extends StatelessWidget {
         style: textStyle,
       );
 
-  bool get hasImage => activity.imageFilePath != null;
+  bool get hasImage => activity.hashedImage.imageFilePath != null;
 
   TextStyle get textStyle {
     return const TextStyle(fontFamily: "Unna", overflow: TextOverflow.ellipsis);
@@ -526,51 +518,3 @@ class LayoutForPortrait extends Layout {
     return addButtonDisabledHeight(context) * 5.0;
   }
 }
-
-//TEST ACTIVITIES ============>
-const mauno = Image(image: AssetImage("assets/images/mauno.png"));
-
-final List<Activity> testActivities = () {
-  final a = [
-    Activity(text: "Eka", date: Date.fromDateTime(DateTime.now())),
-    Activity(
-        text:
-            "Toka ja ihan helvetin pitkä mussutus jostain ihan oudosta asiasta",
-        date: Date.fromDateTime(DateTime.now())),
-    Activity(
-      text: "Kolmas (Mauno)",
-      date: Date.fromDateTime(DateTime.now()),
-      imageFilePath: "assets/images/mauno.png",
-    ),
-    Activity(
-      text: "Neljäs",
-      date: Date.fromDateTime(DateTime.now()),
-    )
-  ];
-  final now = DateTime.now();
-  final weeksMonday = now.add(Duration(days: 1 - now.weekday));
-
-  List<Activity> ret = [];
-  for (int i = 0; i < DateTime.daysPerWeek; ++i) {
-    final repeatingActivities = a
-        .map((act) => Activity(
-            date: Date.fromDateTime(weeksMonday.add(Duration(days: i))),
-            text: act.text,
-            imageFilePath: act.imageFilePath))
-        .toList();
-    ret.addAll(List.generate(repeatingActivities.length,
-        (index) => repeatingActivities[index % repeatingActivities.length],
-        growable: true));
-  }
-
-  return ret;
-}();
-
-void initTestActivities() {
-  for (final a in testActivities) {
-    final i = LogBook().activitiesForDate(a.date).length;
-    LogBook().logActivity(a, i);
-  }
-}
-
-//<============ TEST ACTIVITIES

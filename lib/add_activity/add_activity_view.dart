@@ -1,127 +1,20 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:kalenteri/image_manager.dart';
 import 'package:kalenteri/util.dart';
 
 import 'add_activity_controller.dart';
 import 'page_styles.dart';
 
-class ActivityTextDialog extends StatelessWidget {
-  final Date date;
-  late final TextDialogController logicController =
-      TextDialogController(date: date);
+class ActivityPageReturnParameters {
+  ActivityPageReturnParameters({this.activityText});
 
-  ActivityTextDialog({Key? key, required this.date, String? initialText})
-      : super(key: key) {
-    logicController.pageStyle =
-        PageStyleForTextDialog(initialText: initialText);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        body: Material(
-          color: const Color.fromARGB(223, 255, 255, 255),
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: verticalPaddingAmount),
-            child: SingleChildScrollView(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: SizedBox(
-                      width: sizeForAcceptCancelButtons(context).width,
-                      height: sizeForAcceptCancelButtons(context).height,
-                      child: logicController.cancelButton,
-                    ),
-                  ),
-                  SizedBox(
-                    width: sizeForTextBox(context).width,
-                    height: sizeForTextBox(context).height,
-                    child: logicController.textBox,
-                  ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: SizedBox(
-                      width: sizeForAcceptCancelButtons(context).width,
-                      height: sizeForAcceptCancelButtons(context).height,
-                      child: logicController.acceptButton,
-                    ),
-                  )
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  double get verticalPaddingAmount => 10;
-
-  Size sizeForAcceptCancelButtons(BuildContext context) {
-    if (MediaQuery.of(context).orientation == Orientation.portrait) {
-      return sizeForAcceptCancelButtonsPortrait(context);
-    } else {
-      return sizeForAcceptCancelButtonsLandscape(context);
-    }
-  }
-
-  Size sizeForAcceptCancelButtonsPortrait(BuildContext context) {
-    final width = MediaQuery.of(context).size.width * 0.2;
-    final height = width;
-    return Size(width, height);
-  }
-
-  Size sizeForAcceptCancelButtonsLandscape(BuildContext context) {
-    final width = MediaQuery.of(context).size.width * 0.1;
-    final height = width;
-    return Size(width, height);
-  }
-
-  double fontSize(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    if (MediaQuery.of(context).orientation == Orientation.portrait) {
-      return pixelsToFontSizeEstimate(screenHeight * 0.05);
-    } else {
-      return pixelsToFontSizeEstimate(screenHeight * 0.08);
-    }
-  }
-
-  Size sizeForTextBox(BuildContext context) {
-    if (MediaQuery.of(context).orientation == Orientation.portrait) {
-      return sizeForTextBoxPortrait(context);
-    } else {
-      return sizeForTextBoxLandscape(context);
-    }
-  }
-
-  Size sizeForTextBoxLandscape(BuildContext context) {
-    final availableHeight = getAvailableHeight(context);
-    return Size(
-        MediaQuery.of(context).size.width * 0.80, availableHeight * 0.75);
-  }
-
-  Size sizeForTextBoxPortrait(BuildContext context) {
-    double availableHeight = getAvailableHeight(context);
-    return Size(MediaQuery.of(context).size.width * 0.55,
-        MediaQuery.of(context).size.height * 0.5);
-  }
-
-  double getAvailableHeight(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final availableHeight =
-        max(0.0, mq.size.height - mq.viewInsets.bottom - mq.viewInsets.top);
-    return availableHeight;
-  }
+  String? activityText;
+  Future<String>? imageHash;
 }
 
-/// Input page to create new activities. Image files are temporary, so caller
-/// has to save the activity into permanent storage if needed
+//TODO: Docs
 class AddActivityPage extends StatefulWidget {
   const AddActivityPage({
     Key? key,
@@ -428,5 +321,118 @@ class _AddActivityInLandscape extends StatelessWidget {
   Size sizeForAcceptCancelButtons(BuildContext context) {
     final widthAndHeight = MediaQuery.of(context).size.height * 0.225;
     return Size(widthAndHeight, widthAndHeight);
+  }
+}
+
+class ActivityTextDialog extends StatelessWidget {
+  final Date date;
+  late final TextDialogController logicController =
+      TextDialogController(date: date);
+
+  ActivityTextDialog({Key? key, required this.date, String? initialText})
+      : super(key: key) {
+    logicController.pageStyle =
+        PageStyleForTextDialog(initialText: initialText);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: Material(
+          color: const Color.fromARGB(223, 255, 255, 255),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: verticalPaddingAmount),
+            child: SingleChildScrollView(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Align(
+                    alignment: Alignment.bottomLeft,
+                    child: SizedBox(
+                      width: sizeForAcceptCancelButtons(context).width,
+                      height: sizeForAcceptCancelButtons(context).height,
+                      child: logicController.cancelButton,
+                    ),
+                  ),
+                  SizedBox(
+                    width: sizeForTextBox(context).width,
+                    height: sizeForTextBox(context).height,
+                    child: logicController.textBox,
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: SizedBox(
+                      width: sizeForAcceptCancelButtons(context).width,
+                      height: sizeForAcceptCancelButtons(context).height,
+                      child: logicController.acceptButton,
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  double get verticalPaddingAmount => 10;
+
+  Size sizeForAcceptCancelButtons(BuildContext context) {
+    if (MediaQuery.of(context).orientation == Orientation.portrait) {
+      return sizeForAcceptCancelButtonsPortrait(context);
+    } else {
+      return sizeForAcceptCancelButtonsLandscape(context);
+    }
+  }
+
+  Size sizeForAcceptCancelButtonsPortrait(BuildContext context) {
+    final width = MediaQuery.of(context).size.width * 0.2;
+    final height = width;
+    return Size(width, height);
+  }
+
+  Size sizeForAcceptCancelButtonsLandscape(BuildContext context) {
+    final width = MediaQuery.of(context).size.width * 0.1;
+    final height = width;
+    return Size(width, height);
+  }
+
+  double fontSize(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    if (MediaQuery.of(context).orientation == Orientation.portrait) {
+      return pixelsToFontSizeEstimate(screenHeight * 0.05);
+    } else {
+      return pixelsToFontSizeEstimate(screenHeight * 0.08);
+    }
+  }
+
+  Size sizeForTextBox(BuildContext context) {
+    if (MediaQuery.of(context).orientation == Orientation.portrait) {
+      return sizeForTextBoxPortrait(context);
+    } else {
+      return sizeForTextBoxLandscape(context);
+    }
+  }
+
+  Size sizeForTextBoxLandscape(BuildContext context) {
+    final availableHeight = getAvailableHeight(context);
+    return Size(
+        MediaQuery.of(context).size.width * 0.80, availableHeight * 0.75);
+  }
+
+  Size sizeForTextBoxPortrait(BuildContext context) {
+    return Size(MediaQuery.of(context).size.width * 0.55,
+        MediaQuery.of(context).size.height * 0.5);
+  }
+
+  double getAvailableHeight(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final availableHeight =
+        max(0.0, mq.size.height - mq.viewInsets.bottom - mq.viewInsets.top);
+    return availableHeight;
   }
 }

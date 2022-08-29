@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:kalenteri/image_manager.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../activities.dart';
 import '../assets.dart';
@@ -16,19 +18,30 @@ class AddActivityController {
       : pageStyle = pageStyle ?? PageStyle();
 
   void onPressedGallery(BuildContext context) async {
-    final XFile? file =
-        await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (file != null) {
-      setImage(file);
-    }
+    _selectImage(ImageSource.gallery);
   }
 
   void onPressedCamera(BuildContext context) async {
-    final XFile? file =
-        await _imagePicker.pickImage(source: ImageSource.camera);
-    if (file != null) {
-      setImage(file);
+    bool isAskingForCameraPermission = true;
+    while (isAskingForCameraPermission) {
+      final permissionStatus = await Permission.camera.request();
+      switch (permissionStatus) {
+        case PermissionStatus.denied:
+          //TODO: ask user to confirm
+          continue;
+        case PermissionStatus.permanentlyDenied:
+        //TODO: let user know camera is denied and rebuild ui without camera
+        default:
+          isAskingForCameraPermission = false;
+          break;
+      }
     }
+    _selectImage(ImageSource.camera);
+  }
+
+  void _selectImage(ImageSource source) async {
+    final XFile? xFile = await _imagePicker.pickImage(source: source);
+    if (xFile != null) setImage(xFile);
   }
 
   void setImage(XFile file) {
@@ -119,11 +132,11 @@ class AddActivityController {
     return textBoxState.hasFocus;
   }
 
-  File? get imageFile {
-    return _imageDisplayKey.currentState?._image;
+  HashedImage? get hashedImage {
+    return _imageDisplayKey.currentState?._hashedImage;
   }
 
-  bool get hasImage => imageFile != null;
+  bool get hasImage => hashedImage?.imageFilePath != null;
 
   String get textValue {
     return _textBoxKey.currentState?.text ?? "";
@@ -179,7 +192,7 @@ class AddActivityController {
   }
 
   Activity getActivity() =>
-      Activity(date: date, text: textValue, imageFilePath: imageFile?.path);
+      Activity(date: date, text: textValue, hashedImage: hashedImage);
 }
 
 class TextDialogController extends AddActivityController {
@@ -489,45 +502,46 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
     );
   }
 
-  Widget imageWidget() => _image != null
-      ? Image(
-          image: FileImage(_image!),
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) {
-              return child;
-            }
-            return Center(
-              child: CircularProgressIndicator(
-                color: Colors.red,
-                backgroundColor: Colors.blue,
-                strokeWidth: 5,
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                    : null,
-              ),
-            );
-          },
-        )
-      : const FittedBox(
-          fit: BoxFit.fitHeight,
-          child: Icon(
-            Icons.question_mark_rounded,
-            color: Color.fromARGB(59, 158, 158, 158),
-          ));
+  Widget imageWidget() {
+    if (_hashedImage.imageFilePath != null) {
+      return Image(image: FileImage(File(_hashedImage.imageFilePath!)));
+    } else {
+      return noImagePlaceholder();
+    }
+  }
 
-  void setImage(File imageFile) {
-    setState(
-      () {
-        _image = imageFile;
-      },
+  Center loadingIndicator() {
+    return const Center(
+      child: CircularProgressIndicator(
+        color: Colors.red,
+        backgroundColor: Colors.blue,
+        strokeWidth: 5,
+      ),
     );
   }
 
-  File? get image => _image;
-  GlobalKey imageKey = GlobalKey();
+  FittedBox noImagePlaceholder() {
+    return const FittedBox(
+      fit: BoxFit.fitHeight,
+      child: Icon(
+        Icons.question_mark_rounded,
+        color: Color.fromARGB(59, 158, 158, 158),
+      ),
+    );
+  }
 
-  File? _image;
+  /// Updates the image and returns a future to a new hash id.
+  void setImage(File? imageFile) {
+    if (imageFile == null) return;
+
+    final screenSize = MediaQuery.of(context).size;
+    setState(() {
+      _hashedImage = ImageManager.instance
+          .storeResized(imageFileToStore: imageFile, screenSize: screenSize);
+    });
+  }
+
+  HashedImage _hashedImage = HashedImage();
 }
 
 Decoration decorationForButtons({required BuildContext context}) {
