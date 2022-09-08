@@ -14,8 +14,8 @@ import 'page_styles.dart';
 final _imagePicker = ImagePicker();
 
 class AddActivityController {
-  AddActivityController({required this.date, PageStyle? pageStyle})
-      : pageStyle = pageStyle ?? PageStyle();
+  Activity? oldActivity;
+  AddActivityController({required this.date, this.oldActivity});
 
   void onPressedGallery(BuildContext context) async {
     _selectImage(ImageSource.gallery);
@@ -84,16 +84,21 @@ class AddActivityController {
     }
   }
 
-  void onTextFocus(BuildContext context) {
-    Navigator.of(context)
-        .push<String>(MaterialPageRoute(
-      builder: (context) =>
-          ActivityTextDialog(date: date, initialText: textValue),
-    ))
-        .then((newText) {
-      setTextValue(newText ?? "");
-    });
+  void onTextFocus(BuildContext context) async {
     unFocusText();
+
+    Navigator.of(context)
+        .push<String>(
+      MaterialPageRoute(
+        builder: (context) =>
+            ActivityTextDialog(date: date, initialText: textValue),
+      ),
+    )
+        .then(
+      (newText) {
+        if (newText != null) setTextValue(newText);
+      },
+    );
   }
 
   void onTextFocusLost(BuildContext context) {
@@ -149,36 +154,39 @@ class AddActivityController {
 
   bool get hasText => textValue.trim().isNotEmpty;
 
-  PageStyle pageStyle;
-
-  DateWidget dateWidget(Date date) {
+  DateWidget dateWidget(Date date, {TextStyle? textStyle}) {
     return DateWidget(
       date: date,
-      pageStyle: pageStyle,
+      textStyle: textStyle,
     );
   }
 
-  GalleryButton get galleryButton => GalleryButton(onPressed: onPressedGallery);
+  late final GalleryButton galleryButton =
+      GalleryButton(onPressed: onPressedGallery);
 
-  CameraButton get cameraButton => CameraButton(onPressed: onPressedCamera);
+  late final CameraButton cameraButton =
+      CameraButton(onPressed: onPressedCamera);
 
-  AcceptButton get acceptButton => AcceptButton(
+  late final AcceptButton acceptButton = AcceptButton(
       key: _acceptButtonKey,
       onPressed: onPressedAccept,
       initialButtonStatus: AcceptButtonStatus.disabled);
 
-  CancelButton get cancelButton => CancelButton(onPressed: onPressedCancel);
+  late final CancelButton cancelButton =
+      CancelButton(onPressed: onPressedCancel);
 
-  ActivityImageDisplay get imageDisplay => ActivityImageDisplay(
-        key: _imageDisplayKey,
-      );
+  late final ActivityImageDisplay imageDisplay = ActivityImageDisplay(
+    key: _imageDisplayKey,
+    oldActivity: oldActivity,
+  );
 
   ActivityTextBox get textBox => ActivityTextBox(
-        pageStyle: pageStyle,
+        initialText: oldActivity?.text,
         key: _textBoxKey,
         onGainedFocus: onTextFocus,
         onLostFocus: onTextFocusLost,
         onTextChanged: onTextChanged,
+        autoFocusText: false,
       );
 
   final _acceptButtonKey = GlobalKey<_AcceptButtonState>();
@@ -196,7 +204,8 @@ class AddActivityController {
 }
 
 class TextDialogController extends AddActivityController {
-  TextDialogController({required Date date}) : super(date: date);
+  TextDialogController({required Date date, Activity? oldActivity})
+      : super(date: date, oldActivity: oldActivity);
 
   @override
   void onTextFocus(BuildContext context) {
@@ -211,27 +220,29 @@ class TextDialogController extends AddActivityController {
 }
 
 class DateWidget extends StatelessWidget {
-  const DateWidget({Key? key, required this.date, required this.pageStyle})
-      : super(key: key);
+  const DateWidget({
+    Key? key,
+    required this.date,
+    BoxDecoration? decoration,
+    this.textStyle,
+  })  : _decoration = decoration ?? const BoxDecoration(),
+        super(key: key);
 
   final Date date;
-  final PageStyle pageStyle;
+  final BoxDecoration _decoration;
+  final TextStyle? textStyle;
 
   Color get backgroundColor => backgroundColorForHeader(date).withAlpha(128);
 
-  Decoration get decoration => BoxDecoration(
-      color: backgroundColor, borderRadius: BorderRadius.circular(10));
-
-  TextStyle style(BuildContext context) {
-    return TextStyle(
-        fontFamily: "Cabin Sketch",
-        fontSize: pageStyle.dateWidgetFontSize(context));
+  TextStyle? style(BuildContext context) {
+    return (textStyle ?? Theme.of(context).textTheme.caption)
+        ?.copyWith(fontFamily: "Cabin Sketch");
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: decoration,
+      decoration: _decoration.copyWith(color: backgroundColor),
       child: Text(
         "${date.abbreviatedWeekDay} ${date.toDMY()}",
         textAlign: TextAlign.center,
@@ -342,18 +353,27 @@ class _AcceptButtonState extends State<AcceptButton> {
 enum AcceptButtonStatus { disabled, acceptText, acceptAndReturn }
 
 class ActivityTextBox extends StatefulWidget {
-  const ActivityTextBox(
-      {Key? key,
-      required this.onGainedFocus,
-      required this.onLostFocus,
-      required this.onTextChanged,
-      required this.pageStyle})
-      : super(key: key);
+  final bool autoFocusText;
+  final String? initialText;
+  const ActivityTextBox({
+    Key? key,
+    this.initialText,
+    this.autoFocusText = false,
+    required this.onGainedFocus,
+    required this.onLostFocus,
+    required this.onTextChanged,
+    TextStyle? textStyle,
+  })  : _textStyle = textStyle,
+        super(key: key);
 
   final void Function(BuildContext context) onGainedFocus;
   final void Function(BuildContext context) onLostFocus;
   final void Function(BuildContext context, {String? newValue}) onTextChanged;
-  final PageStyle pageStyle;
+  final TextStyle? _textStyle;
+
+  TextStyle? textStyle(BuildContext context) {
+    return _textStyle ?? Theme.of(context).textTheme.bodyMedium;
+  }
 
   @override
   State<ActivityTextBox> createState() => _ActivityTextBoxState();
@@ -367,11 +387,11 @@ class _ActivityTextBoxState extends State<ActivityTextBox> {
       child: TextField(
         onChanged: (String? newValue) =>
             widget.onTextChanged(context, newValue: newValue),
-        autofocus: widget.pageStyle.autofocusText ?? false,
+        autofocus: widget.autoFocusText,
         textCapitalization: TextCapitalization.sentences,
         focusNode: focusNode,
         controller: textController,
-        style: TextStyle(fontSize: widget.pageStyle.textBoxFontSize(context)),
+        style: widget.textStyle(context),
         maxLines: 5,
         decoration: InputDecoration(
             hintText: activityTextInputHint, border: InputBorder.none),
@@ -399,7 +419,7 @@ class _ActivityTextBoxState extends State<ActivityTextBox> {
   void initState() {
     super.initState();
     focusNode.addListener(focusChanged);
-    textController = TextEditingController(text: widget.pageStyle.initialText);
+    textController = TextEditingController(text: widget.initialText);
   }
 
   @override
@@ -432,7 +452,7 @@ class _ActivityTextBoxState extends State<ActivityTextBox> {
     if (_hadFocusPreviously != focusNode.hasFocus) {
       setState(() {
         _hadFocusPreviously = focusNode.hasFocus;
-        _hadFocusPreviously
+        focusNode.hasFocus
             ? widget.onGainedFocus(context)
             : widget.onLostFocus(context);
       });
@@ -472,13 +492,18 @@ class CancelButton extends StatelessWidget {
 }
 
 class ActivityImageDisplay extends StatefulWidget {
-  const ActivityImageDisplay({Key? key}) : super(key: key);
+  final Activity? oldActivity;
+  const ActivityImageDisplay({Key? key, this.oldActivity}) : super(key: key);
 
   @override
   State<ActivityImageDisplay> createState() => _ActivityImageDisplayState();
 }
 
 class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
+  late HashedImage _hashedImage = widget.oldActivity != null
+      ? widget.oldActivity!.hashedImage
+      : HashedImage();
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -506,7 +531,7 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
     if (_hashedImage.imageFilePath != null) {
       return Image(image: FileImage(File(_hashedImage.imageFilePath!)));
     } else {
-      return noImagePlaceholder();
+      return const NoActivityImage();
     }
   }
 
@@ -516,16 +541,6 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
         color: Colors.red,
         backgroundColor: Colors.blue,
         strokeWidth: 5,
-      ),
-    );
-  }
-
-  FittedBox noImagePlaceholder() {
-    return const FittedBox(
-      fit: BoxFit.fitHeight,
-      child: Icon(
-        Icons.question_mark_rounded,
-        color: Color.fromARGB(59, 158, 158, 158),
       ),
     );
   }
@@ -540,8 +555,23 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
           .storeResized(imageFileToStore: imageFile, screenSize: screenSize);
     });
   }
+}
 
-  HashedImage _hashedImage = HashedImage();
+class NoActivityImage extends StatelessWidget {
+  const NoActivityImage({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const FittedBox(
+      fit: BoxFit.fitHeight,
+      child: Icon(
+        Icons.question_mark_rounded,
+        color: Color.fromARGB(59, 158, 158, 158),
+      ),
+    );
+  }
 }
 
 Decoration decorationForButtons({required BuildContext context}) {

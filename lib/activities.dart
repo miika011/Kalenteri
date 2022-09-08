@@ -10,7 +10,7 @@ class Activity {
   String _text;
   HashedImage _hashedImage;
 
-  Activity({required date, String? text, HashedImage? hashedImage})
+  Activity({required Date date, String? text, HashedImage? hashedImage})
       : _text = text ?? "",
         _hashedImage = hashedImage ?? HashedImage(),
         _date = date;
@@ -57,10 +57,15 @@ class LogBook {
   List<Activity> _getModifiableListOfActivities(Date date) =>
       _activities[date] ??= [];
 
-  void logActivity(Activity activity, int index) {
+  void logActivity({required Activity activity, required int index}) {
     final activitiesForDay = _getModifiableListOfActivities(activity.date);
     index = min(index, activitiesForDay.length);
     activitiesForDay.insert(index, activity);
+  }
+
+  ///Throws on invalid index
+  void setActivity({required Activity activity, required int index}) {
+    _getModifiableListOfActivities(activity.date)[index] = activity;
   }
 
   List<Activity> activitiesForDate(Date date) {
@@ -74,8 +79,12 @@ class LogBook {
       final dateJson = jsonDecode(entry.key);
       final date = Date.fromJson(dateJson);
       final List<Activity> activitiesForDay = [];
-      for (final act in entry.value) {
-        activitiesForDay.add(Activity.fromJson(act));
+      for (final activityJson in entry.value) {
+        final activity = Activity.fromJson(activityJson);
+        if (activity.text.isNotEmpty ||
+            activity.hashedImage.imageHash != null) {
+          activitiesForDay.add(Activity.fromJson(activityJson));
+        }
       }
       activities[date] = activitiesForDay;
     }

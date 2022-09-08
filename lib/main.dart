@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kalenteri/activities.dart';
 import 'package:kalenteri/util.dart';
-import 'calendar_view.dart';
+import 'calendar_view/calendar_view.dart';
 import 'image_manager.dart';
 
 void main() async {
@@ -10,8 +10,16 @@ void main() async {
   await ImageManager.load();
 
   runApp(
-    const MaterialApp(
-      home: AppHome(),
+    MaterialApp(
+      home: const AppHome(),
+      // theme: ThemeData(
+      //   appBarTheme: AppBarTheme(
+      //     color: Colors.white,
+      //     titleTextStyle: TextStyle(
+      //       color: Colors.black,
+      //     ),
+      //   ),
+      // ),
     ),
   );
 }

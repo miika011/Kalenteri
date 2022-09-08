@@ -61,6 +61,8 @@ class ImageManager {
   /// Stores a smaller resolution image in permanent storage.
   /// Resizes to match the bounds of [screenSize] if the image is larger
   ///  Returns a hash ID for the image or null on error.
+  /// Good enough hash function to guarantee unique ID unless the world
+  /// ends.
   HashedImage storeResized(
       {required File imageFileToStore, required Size screenSize}) {
     final hashedImage = HashedImage(temporaryFilePath: imageFileToStore.path);

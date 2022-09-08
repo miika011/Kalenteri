@@ -1,3 +1,5 @@
+*.html
+
 # Media files
 *.svg
 *.png

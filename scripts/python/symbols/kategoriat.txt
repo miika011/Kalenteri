@@ -1,0 +1,113 @@
+singular ; split
+Ihmiset ammatit ; ihmiset & ammatit				
+Ruoka annokset ; ruoka & annokset
+Rakennukset toimistot ja tehtaat ; rakennukset & toimistot & tehtaat
+Liikenne vesiliikenne ; liikenne & vesi
+Vaatteet muut ; vaatteet
+Rakennukset ; rakennukset
+Sotilaallinen ; sotilaallinen
+Juhlat tapahtumat ; juhla & tapahtuma & tapahtumat
+Kuvaileva sijainti ; kuvaileva & sijainti
+Tekniikka TV ; tekniikka & tv
+Liikenne avaruus ; liikenne & avaruus
+Kuvaileva muoto ; kuvaileva & muoto
+Eläimet matelijat ; eläimet & matelijat
+Ruoka jälkiruuat ja herkut ; ruoka & jälkiruoka & jälkiruoat & jälkiruuat & herkku & herkut & makea & leivonnaiset & leivonta 
+Juomat ; juomat
+Liikenne tieliikenne ; liikenne & tie & tieliikenne
+Ruoka kala ja äyriäisruuat ; ruoka & kala & äyriäiset & meri
+Ruoka ruokailu ; ruoka & ruokailu & syöminen & ateria
+Ihmiset tekeminen ; ihmiset & tekeminen & aktiviteetti & toiminta & puuha
+Ympäristö sää ; ympäristö & sää
+Vapaa-aika lelut ; vapaa-aika & lelut
+Ruoka vihannekset ja salaatit ; ruoka & vihannekset & salaatit & kasvikset
+Ruoka pastat ja riisi ; ruoka & pasta & riisi
+Eläimet hämähäkit ja hyönteiset ; eläimet & hämähäkit & hyönteiset
+Vapaa-aika pelit ; vapaa-aika & pelit
+Liikenne raideliikenne ; liikenne & raideliikenne & rautatie & juna & junat
+Ruoka Tapahtumat ; ruoka & tapahtumat
+Urheilu ; urheilu
+Ruoka ruuanlaitto ; ruoka & ruoanlaitto & ruuanlaitto
+Ruoka välineet ; ruoka & ruokailu & ruokailuvälineet
+Rakennukset asuinrakennukset ; rakennukset & talot & asuinrakennukset & asunnot & koti & kodit
+Juomat astiat ja määrät ; juomat & astiat & määrät
+Politiikka ; politiikka
+Eläimet elinympäristö ; eläimet & elinympäristö & ympäristö & metsä
+Urheilu urheiluvälineet ; urheilu & urheiluvälineet & välineet & varusteet & urheiluvarusteet
+Vaatteet korut ; vaatteet & korut & pukeutuminen
+Vapaa-aika muut ; vapaa-aika
+Maat kartat ; maat & kartat & valtiot & kartta
+Eläimet Muut ; eläimet
+Ruoka siipikarja ; ruoka & siipikarja & linnut
+Eläimet linnut ; eläimet & linnut
+Kasvit ja puut ; kasvit & kasvi & puu & puut & metsä
+Eläimet kalat ja merenelävät ; eläimet & kalat & merenelävät & meri
+Apuvälineet merkit ; apuvälineet & merkit
+Taide värit ; taide & värit
+Aakkoset ; aakkoset
+Tekniikka media ; tekniikka & media
+Tekniikka tietokoneet ; tekniikka & tietokoneet
+Kuvaileva aika ; kuvaileva & aika
+Ruoka hedelmät ; ruoka & hedelmät & kasvikset
+Rakennukset kotityöt ; rakennukset & kotityöt & työ & työt
+Juhlat välineet ; juhlat & välineet
+Vaatteet urheilu ; vaatteet & urheilu & urheiluvaatteet
+Terveys sairaalatarvikkeet ; hoitotarvikkeet & terveys & sairaalatarvikkeet & sairaala & terveyskeskus
+Rakennukset puutarha ja maatila ; rakennukset & puutarha & maatila
+Kysymykset ; kysymykset
+Terveys kehonosat ; terveys & kehonosat & raajat & elimet
+Ihmiset tunteet ; ihmiset & tunteet
+Taide ; taide
+Tietotekniikka ; tietotekniikka
+Uskonto juhlapäivä ; uskonto & juhlapäivä & juhlapäivä & uskonnot
+Rakennukset tarvikkeet ; rakennukset & tarvikkeet
+Uskonto henkilö ; uskonto & henkilö & henkilöt
+Työ ja koulu ; työ & koulu & opiskelu
+Ruoka kananmunat ; ruoka & kananmunat
+Ruoka liha ; ruoka & liha
+Tekniikka puhelin ; puhelin & tekniikka & kännykkä
+Eläimet eläintenhoito ; eläintenhoito & lemmikit & eläimet
+Rakennukset kauppa ; kauppa & kaupat & rakennukset
+Tekniikka muut ; tekniikka 
+Kuvaileva määrä ; määrä & kuvaileva
+Rakennukset Laitteet ; laitteet & rakennukset
+Kuvaileva tila ; tila & kuvaileva
+Keskustelu ; keskustelu
+Tiede tähtitiede ; tähtitiede & tiede
+Vaatteet tarvikkeet ; vaatteet & tarvikkeet
+Rakennukset koulu ; koulu & rakennukset
+Eläimet ominaisuudet ; eläimet
+Maat liput ; liput & lippu & maat & valtio
+Ruoka ainekset ; ruoka & ruoka-ainekset & ruoka-aineet
+Työkalut työpaja ; työkalut & työpaja & käsityö & käsityöt
+Numerot ; numerot & matematiikka & matikka
+Talous ; talous & raha
+Musiikki instrumentit ; soittimet & soitin & instrumentit & musiikki 
+Työkalut Toiminta ; työkalut & toiminta & työ & työt & tekeminen
+Ruoka ruokavalio ; ruokavalio & ruoka
+Uskonto yleiset ; uskonto
+Numerot laskutoimitukset ; laskutoimitukset & numerot & matematiikka & matikka
+Ruoka maitotuotteet ; maitotuotteet & ruoka
+Juomat kuvaileva ; juomat & kuvaileva
+Liikenne ilmailu ; ilmailu & liikenne & lentokone
+Eläimet äyriäiset ja nilviäiset ; äyriäiset & nilviäiset & meri & eläimet & merenelävät
+Rakennukset julkiset ; julkiset & rakennukset
+Ihmiset kuvaileva ; ihmiset & kuvaileva
+Eläimet muut selkärangattomat ; selkärangattomat & eläimet
+Kuvaileva suunta ; suunta & kuvaileva
+Vapaa-aika leikkikenttä ; leikkikenttä & vapaa-aika & leikki & leikkiminen & puuha
+Ihmiset toiminta ; toiminta & ihmiset
+Terveys hoitotarvikkeet ; hoitotarvikkeet & terveys
+Juomat juominen ; juominen & juomat & ruokailu
+Eläimet nisäkkäät ; nisäkkäät & eläimet
+Apuvälineet ; apuvälineet
+Työkalut puutarha ; puutarha & työkalut & puutarhavälineet
+Ruoka pähkinät ; pähkinät & pähkinä & ruoka
+Ruoka viljatuotteet ja leivonta ; leivonta & leipominen & viljatuotteet & vilja & ruoka
+Eläimet ruokinta ; ruokinta & lemmikit & lemmikki & eläimet
+Terveys hoitotoimet ; hoitotoimet & terveys
+Matkustus ; matkustus & matkustaminen & liikenne
+Ihmiset suhteet ; suhteet & ihmissuhteet & ihmiset
+Terveys terveydentila ; terveydentila & terveys & sairaus & sairaudet
+Rakennukset huonekalut ; huonekalut & rakennukset & sisustus
+Tiede ; tiede

@@ -305,6 +305,12 @@ double pixelsToFontSizeEstimate(double pixels) {
   return pixels / 16.0 * 12.0;
 }
 
+double fontSizeFraction(BuildContext context,
+    {required double fractionOfScreenHeight}) {
+  return pixelsToFontSizeEstimate(
+      MediaQuery.of(context).size.height * fractionOfScreenHeight);
+}
+
 T clamp<T extends Comparable>(T value, T min, T max) {
   if (value.compareTo(max) > 0) {
     return max;

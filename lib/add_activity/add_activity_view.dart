@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:kalenteri/image_manager.dart';
 import 'package:kalenteri/util.dart';
 
+import '../activities.dart';
 import 'add_activity_controller.dart';
 import 'page_styles.dart';
 
@@ -16,12 +17,69 @@ class ActivityPageReturnParameters {
 
 //TODO: Docs
 class AddActivityPage extends StatefulWidget {
-  const AddActivityPage({
-    Key? key,
-    required this.date,
-  }) : super(key: key);
+  const AddActivityPage({Key? key, required this.date, this.oldActivity})
+      : super(key: key);
 
   final Date date;
+  final Activity? oldActivity;
+
+  static Future<Activity?> addNewActivity(
+      {required Date date,
+      required int index,
+      required BuildContext context}) async {
+    final activity =
+        await addOrEditActivity(date: date, index: index, context: context);
+    if (activity != null) {
+      saveActivityToLogBook(
+          newActivity: activity,
+          index: index,
+          logFunction: LogBook().logActivity);
+    }
+    return activity;
+  }
+
+  static Future<Activity?> editActivity(
+      {required Date date,
+      required int index,
+      required Activity oldActivity,
+      required BuildContext context}) async {
+    final activity = await addOrEditActivity(
+        date: date, index: index, context: context, oldActivity: oldActivity);
+    if (activity != null) {
+      saveActivityToLogBook(
+          newActivity: activity,
+          index: index,
+          logFunction: LogBook().setActivity);
+    }
+    return activity;
+  }
+
+  static Future<Activity?> addOrEditActivity(
+      {required Date date,
+      required int index,
+      required BuildContext context,
+      Activity? oldActivity}) async {
+    final newActivity = await Navigator.push<Activity?>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddActivityPage(
+          date: date,
+          oldActivity: oldActivity,
+        ),
+      ),
+    );
+    return newActivity;
+  }
+
+  static Future<void> saveActivityToLogBook(
+      {required Activity newActivity,
+      required int index,
+      required void Function({required Activity activity, required int index})
+          logFunction}) async {
+    logFunction(activity: newActivity, index: index);
+    await newActivity.hashedImage.futureHash;
+    LogBook.save();
+  }
 
   @override
   State<StatefulWidget> createState() => _AddActivityPageState();
@@ -36,11 +94,9 @@ class _AddActivityPageState extends State<AddActivityPage> {
         body: OrientationBuilder(
           builder: (context, orientation) {
             if (orientation == Orientation.portrait) {
-              logicController.pageStyle = PageStyleForPortrait();
               return _AddActivityInPortrait(
                   date: widget.date, logicController: logicController);
             } else {
-              logicController.pageStyle = PageStyleForLandscape();
               return _AddActivityInLandscape(
                   date: widget.date, logicController: logicController);
             }
@@ -50,7 +106,8 @@ class _AddActivityPageState extends State<AddActivityPage> {
     );
   }
 
-  late final logicController = AddActivityController(date: widget.date);
+  late final logicController =
+      AddActivityController(date: widget.date, oldActivity: widget.oldActivity);
 }
 
 class _AddActivityInPortrait extends StatelessWidget {
@@ -76,7 +133,10 @@ class _AddActivityInPortrait extends StatelessWidget {
             ),
           ),
         ),
-        logicController.dateWidget(date),
+        logicController.dateWidget(date,
+            textStyle: TextStyle(
+                fontSize:
+                    fontSizeFraction(context, fractionOfScreenHeight: 0.05))),
         Padding(
           padding: paddingForSecondRow(context),
           child: Row(
@@ -243,7 +303,10 @@ class _AddActivityInLandscape extends StatelessWidget {
                   height: sizeForImageDisplay(context).height,
                   child: logicController.imageDisplay,
                 )),
-            logicController.dateWidget(date),
+            logicController.dateWidget(date,
+                textStyle: TextStyle(
+                    fontSize: pixelsToFontSizeEstimate(
+                        MediaQuery.of(context).size.height * 0.1))),
             Row(
               children: [
                 Padding(
@@ -326,13 +389,12 @@ class _AddActivityInLandscape extends StatelessWidget {
 
 class ActivityTextDialog extends StatelessWidget {
   final Date date;
-  late final TextDialogController logicController =
-      TextDialogController(date: date);
+  late final TextDialogController logicController;
 
   ActivityTextDialog({Key? key, required this.date, String? initialText})
       : super(key: key) {
-    logicController.pageStyle =
-        PageStyleForTextDialog(initialText: initialText);
+    logicController = TextDialogController(
+        date: date, oldActivity: Activity(date: date, text: initialText));
   }
 
   @override
