@@ -12,14 +12,14 @@ void main() async {
   runApp(
     MaterialApp(
       home: const AppHome(),
-      // theme: ThemeData(
-      //   appBarTheme: AppBarTheme(
-      //     color: Colors.white,
-      //     titleTextStyle: TextStyle(
-      //       color: Colors.black,
-      //     ),
-      //   ),
-      // ),
+      theme: ThemeData(
+        appBarTheme: const AppBarTheme(
+          color: Colors.white,
+          titleTextStyle: TextStyle(
+            color: Colors.black,
+          ),
+        ),
+      ),
     ),
   );
 }
@@ -32,15 +32,29 @@ class AppHome extends StatefulWidget {
 }
 
 class _AppHomeState extends State<AppHome> {
+  late final WeekPageController pageController;
+
+  ThemeData get themeData => Theme.of(context).copyWith(
+        scrollbarTheme: ScrollbarThemeData(
+          thumbColor: MaterialStateProperty.all(
+            const Color.fromARGB(150, 0, 0, 0),
+          ),
+          thumbVisibility: MaterialStateProperty.all(true),
+          thickness: MaterialStateProperty.all(15),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
-      controller: pageController,
-      itemBuilder: (context, index) {
-        final dayInTheWeek = pageController.fromIndex(index);
-        return WeekWidget(dayInTheWeek);
-      },
-    );
+    return Theme(
+        data: themeData,
+        child: PageView.builder(
+          controller: pageController,
+          itemBuilder: (context, index) {
+            final dayInTheWeek = pageController.fromIndex(index);
+            return WeekWidget(dayInTheWeek);
+          },
+        ));
   }
 
   @override
@@ -54,8 +68,6 @@ class _AppHomeState extends State<AppHome> {
     pageController.dispose();
     super.dispose();
   }
-
-  late final WeekPageController pageController;
 }
 
 ///Starts from the middle of a signed 32bit integer

@@ -10,10 +10,25 @@ class Activity {
   String _text;
   HashedImage _hashedImage;
 
+  Date get date => _date;
+  String get text => _text;
+  HashedImage get hashedImage => _hashedImage;
+
   Activity({required Date date, String? text, HashedImage? hashedImage})
       : _text = text ?? "",
         _hashedImage = hashedImage ?? HashedImage(),
         _date = date;
+
+  @override
+  bool operator ==(Object other) {
+    return other is Activity &&
+        date == other.date &&
+        text == other.text &&
+        hashedImage == other.hashedImage;
+  }
+
+  @override
+  int get hashCode => hashCodeFromObjects([date, text, hashedImage]);
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     final date = json["date"];
@@ -27,10 +42,6 @@ class Activity {
 
   Map<String, dynamic> toJson() =>
       {"date": date, "label": text, "imageHash": _hashedImage.imageHash};
-
-  Date get date => _date;
-  String get text => _text;
-  HashedImage get hashedImage => _hashedImage;
 }
 
 /// Logbook for logging activities
@@ -57,15 +68,24 @@ class LogBook {
   List<Activity> _getModifiableListOfActivities(Date date) =>
       _activities[date] ??= [];
 
-  void logActivity({required Activity activity, required int index}) {
+  void addActivity({required Activity activity, required int index}) {
     final activitiesForDay = _getModifiableListOfActivities(activity.date);
     index = min(index, activitiesForDay.length);
     activitiesForDay.insert(index, activity);
+    save();
+  }
+
+  void deleteActivity({required Date date, required int index}) {
+    final activities = _getModifiableListOfActivities(date);
+    if (index < activities.length) {
+      activities.removeAt(index);
+    }
   }
 
   ///Throws on invalid index
   void setActivity({required Activity activity, required int index}) {
     _getModifiableListOfActivities(activity.date)[index] = activity;
+    save();
   }
 
   List<Activity> activitiesForDate(Date date) {

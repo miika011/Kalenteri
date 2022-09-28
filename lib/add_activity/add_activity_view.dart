@@ -1,12 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:kalenteri/image_manager.dart';
 import 'package:kalenteri/util.dart';
 
 import '../activities.dart';
 import 'add_activity_controller.dart';
-import 'page_styles.dart';
 
 class ActivityPageReturnParameters {
   ActivityPageReturnParameters({this.activityText});
@@ -22,64 +20,6 @@ class AddActivityPage extends StatefulWidget {
 
   final Date date;
   final Activity? oldActivity;
-
-  static Future<Activity?> addNewActivity(
-      {required Date date,
-      required int index,
-      required BuildContext context}) async {
-    final activity =
-        await addOrEditActivity(date: date, index: index, context: context);
-    if (activity != null) {
-      saveActivityToLogBook(
-          newActivity: activity,
-          index: index,
-          logFunction: LogBook().logActivity);
-    }
-    return activity;
-  }
-
-  static Future<Activity?> editActivity(
-      {required Date date,
-      required int index,
-      required Activity oldActivity,
-      required BuildContext context}) async {
-    final activity = await addOrEditActivity(
-        date: date, index: index, context: context, oldActivity: oldActivity);
-    if (activity != null) {
-      saveActivityToLogBook(
-          newActivity: activity,
-          index: index,
-          logFunction: LogBook().setActivity);
-    }
-    return activity;
-  }
-
-  static Future<Activity?> addOrEditActivity(
-      {required Date date,
-      required int index,
-      required BuildContext context,
-      Activity? oldActivity}) async {
-    final newActivity = await Navigator.push<Activity?>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddActivityPage(
-          date: date,
-          oldActivity: oldActivity,
-        ),
-      ),
-    );
-    return newActivity;
-  }
-
-  static Future<void> saveActivityToLogBook(
-      {required Activity newActivity,
-      required int index,
-      required void Function({required Activity activity, required int index})
-          logFunction}) async {
-    logFunction(activity: newActivity, index: index);
-    await newActivity.hashedImage.futureHash;
-    LogBook.save();
-  }
 
   @override
   State<StatefulWidget> createState() => _AddActivityPageState();
@@ -394,7 +334,9 @@ class ActivityTextDialog extends StatelessWidget {
   ActivityTextDialog({Key? key, required this.date, String? initialText})
       : super(key: key) {
     logicController = TextDialogController(
-        date: date, oldActivity: Activity(date: date, text: initialText));
+      date: date,
+      oldActivity: Activity(date: date, text: initialText),
+    );
   }
 
   @override
@@ -409,29 +351,31 @@ class ActivityTextDialog extends StatelessWidget {
             child: SingleChildScrollView(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: SizedBox(
-                      width: sizeForAcceptCancelButtons(context).width,
-                      height: sizeForAcceptCancelButtons(context).height,
-                      child: logicController.cancelButton,
-                    ),
+                  SizedBox(
+                    width: sizeForAcceptCancelButtons(context).width,
+                    height: sizeForAcceptCancelButtons(context).height,
+                    child: logicController.cancelButton,
                   ),
                   SizedBox(
                     width: sizeForTextBox(context).width,
                     height: sizeForTextBox(context).height,
-                    child: logicController.textBox,
+                    child: Theme(
+                        data: ThemeData(
+                          textTheme: TextTheme(
+                            bodyMedium: TextStyle(
+                              fontSize: getFontSize(context),
+                            ),
+                          ),
+                        ),
+                        child: logicController.textBox),
                   ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: SizedBox(
-                      width: sizeForAcceptCancelButtons(context).width,
-                      height: sizeForAcceptCancelButtons(context).height,
-                      child: logicController.acceptButton,
-                    ),
-                  )
+                  SizedBox(
+                    width: sizeForAcceptCancelButtons(context).width,
+                    height: sizeForAcceptCancelButtons(context).height,
+                    child: logicController.acceptButton,
+                  ),
                 ],
               ),
             ),
@@ -439,6 +383,12 @@ class ActivityTextDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  double getFontSize(BuildContext context) {
+    return MediaQuery.of(context).orientation == Orientation.portrait
+        ? pixelsToFontSizeEstimate(MediaQuery.of(context).size.height * 0.04)
+        : pixelsToFontSizeEstimate(MediaQuery.of(context).size.height * 0.08);
   }
 
   double get verticalPaddingAmount => 10;

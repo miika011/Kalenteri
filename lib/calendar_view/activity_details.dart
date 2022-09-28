@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kalenteri/add_activity/add_activity_controller.dart';
 import 'package:kalenteri/add_activity/add_activity_view.dart';
-import 'package:kalenteri/image_manager.dart';
 import 'package:kalenteri/util.dart';
 import 'dart:io';
 
 import '../activities.dart';
-import 'calendar_view.dart';
 
 class ActivityDetailsWidget extends StatefulWidget {
   final Activity activity;
@@ -20,19 +18,20 @@ class ActivityDetailsWidget extends StatefulWidget {
 }
 
 class _ActivityDetailsWidgetState extends State<ActivityDetailsWidget> {
-  late Activity activity;
+  late Activity editableActivity;
 
   @override
   void initState() {
     super.initState();
-    activity = widget.activity;
+    editableActivity = widget.activity;
   }
 
   @override
   Widget build(BuildContext context) {
-    Widget image = activity.hashedImage.imageFilePath != null
+    Widget image = editableActivity.hashedImage.imageFilePath != null
         ? ActivityDetailsImageWidget(
-            imageProvider: FileImage(File(activity.hashedImage.imageFilePath!)))
+            imageProvider:
+                FileImage(File(editableActivity.hashedImage.imageFilePath!)))
         : const NoActivityImage();
 
     return Dialog(
@@ -40,23 +39,29 @@ class _ActivityDetailsWidgetState extends State<ActivityDetailsWidget> {
         appBar: appBar(context),
         body: Column(
           children: [
-            Card(
-              elevation: 10,
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: image,
-              ),
-            ),
+            SizedBox(
+                height: MediaQuery.of(context).size.height * 0.33,
+                child: Card(
+                  elevation: 10,
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.4,
+                    child: image,
+                  ),
+                )),
             Card(
               shape: Border.all(style: BorderStyle.none),
               elevation: 10,
               child: DateWidget(
                 textStyle: textStyleForDateWidget(context),
-                date: activity.date,
+                date: editableActivity.date,
               ),
             ),
             Expanded(
-              child: ActivityDetailsDescriptionWidget(activity: activity),
+              child: Card(
+                color: const Color.fromARGB(255, 240, 240, 240),
+                child: ActivityDetailsDescriptionWidget(
+                    activity: editableActivity),
+              ),
             ),
           ],
         ),
@@ -65,46 +70,55 @@ class _ActivityDetailsWidgetState extends State<ActivityDetailsWidget> {
   }
 
   AppBar appBar(BuildContext context) {
-    final layout = LayoutForPortrait();
-    final appBarBottomHeight = layout.addButtonDisabledHeight(context);
-
     return AppBar(
       iconTheme: const IconThemeData(color: Color.fromARGB(255, 75, 75, 75)),
-      backgroundColor: Colors.white,
-      leading: IconButton(
-        iconSize: appBarIconSize(),
+      backgroundColor: backgroundColorForHeader(editableActivity.date),
+      leading: _AppBarIcon(
         icon: const Icon(Icons.close),
+        iconSize: appBarIconSize(),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        IconButton(
+        _AppBarIcon(
+          icon: const Icon(Icons.delete),
           iconSize: appBarIconSize(),
           onPressed: () async {
-            final newActivity = await AddActivityPage.editActivity(
-              date: activity.date,
-              index: widget.index,
+            final wantToDelete = await showConfirmDialog(
               context: context,
-              oldActivity: activity,
+              description: 'Haluatko poistaa tapahtuman?',
+            );
+            if (!mounted) return;
+            if (wantToDelete ?? false) {
+              LogBook().deleteActivity(
+                  date: editableActivity.date, index: widget.index);
+              Navigator.pop(context);
+            }
+          },
+        ),
+        _AppBarIcon(
+          icon: const Icon(Icons.edit),
+          iconSize: appBarIconSize(),
+          onPressed: () async {
+            final Activity? newActivity = await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => AddActivityPage(
+                  date: editableActivity.date,
+                  oldActivity: editableActivity,
+                ),
+              ),
             );
             if (newActivity != null) {
               setState(
                 () {
-                  activity = newActivity;
+                  LogBook()
+                      .setActivity(activity: newActivity, index: widget.index);
+                  editableActivity = newActivity;
                 },
               );
             }
           },
-          icon: const Icon(Icons.edit),
-        )
+        ),
       ],
-      bottom: PreferredSize(
-        preferredSize: Size.fromHeight(appBarBottomHeight),
-        child: SizedBox(
-            height: appBarBottomHeight,
-            child: Container(
-              decoration: layout.addButtonDecoration,
-            )),
-      ),
     );
   }
 
@@ -131,6 +145,30 @@ class ActivityDetailsImageWidget extends StatelessWidget {
   }
 }
 
+class _AppBarIcon extends StatelessWidget {
+  const _AppBarIcon(
+      {Key? key,
+      required this.icon,
+      required this.iconSize,
+      required this.onPressed})
+      : super(key: key);
+  final Icon icon;
+  final double iconSize;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.fitHeight,
+      child: IconButton(
+        iconSize: iconSize,
+        icon: icon,
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
 class ActivityDetailsDescriptionWidget extends StatelessWidget {
   final Activity activity;
   const ActivityDetailsDescriptionWidget({Key? key, required this.activity})
@@ -142,7 +180,7 @@ class ActivityDetailsDescriptionWidget extends StatelessWidget {
           fontSize: fontSizeFraction(context, fractionOfScreenHeight: 0.04));
     } else {
       return TextStyle(
-          fontSize: fontSizeFraction(context, fractionOfScreenHeight: 0.1));
+          fontSize: fontSizeFraction(context, fractionOfScreenHeight: 0.07));
     }
   }
 
@@ -162,7 +200,7 @@ class ActivityDetailsDescriptionWidget extends StatelessWidget {
       scrollDirection: Axis.vertical,
       children: [
         Padding(
-          padding: EdgeInsets.all(5),
+          padding: const EdgeInsets.all(5),
           child: Text(
             activity.text,
             style: descriptionTextStyle(context),

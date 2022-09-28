@@ -5,6 +5,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as lib_image;
+import 'package:kalenteri/activities.dart';
+import 'package:kalenteri/util.dart';
 import 'package:path_provider/path_provider.dart' as lib_path;
 import 'package:crypto/crypto.dart' show md5;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,9 +18,6 @@ class ImageManager {
   static ImageManager get instance => _instance;
 
   Map<String, String?> _images = {};
-  bool _isWorking = false;
-
-  bool get isWorking => _isWorking;
 
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -31,6 +30,7 @@ class ImageManager {
   static void save() async {
     final prefs = await SharedPreferences.getInstance();
     prefs.setString("$ImageManager", jsonEncode(_instance));
+    LogBook.save();
   }
 
   Map<String, dynamic> toJson() {
@@ -66,12 +66,8 @@ class ImageManager {
   HashedImage storeResized(
       {required File imageFileToStore, required Size screenSize}) {
     final hashedImage = HashedImage(temporaryFilePath: imageFileToStore.path);
-    try {
-      _isWorking = true;
-      hashedImage.startHash(() => _storeResized(imageFileToStore, screenSize));
-    } finally {
-      _isWorking = false;
-    }
+    _storeResized(imageFileToStore, screenSize)
+        .then((hash) => hashedImage.setImageHash(hash));
     return hashedImage;
   }
 
@@ -109,21 +105,21 @@ class ImageManager {
       return HashedImage(imageHash: imageHash, temporaryFilePath: oldPath);
     }
 
-    final originalImage = lib_image.decodeImage(imageRawData);
-    late final int? width;
-    late final int? height;
-    if (originalImage!.width > originalImage.height) {
-      width = min(originalImage.width, screenSize.width.toInt());
-      height = null;
-    } else {
-      width = null;
-      height = min(originalImage.width, screenSize.height.toInt());
-    }
+    final originalImage = lib_image.decodeImage(imageRawData)!;
+
+    //In case original image is landscape and screen is in portrait
+    int width = (originalImage.width >= originalImage.height &&
+                screenSize.width >= screenSize.height
+            ? screenSize.width
+            : screenSize.height)
+        .toInt();
+
+    width = min(width, originalImage.width); //Don't upscale
 
     final resizedImage = lib_image.copyResize(
-      lib_image.decodeImage(imageRawData)!,
+      originalImage,
       width: width,
-      height: height,
+      height: null, // Don't change aspect ratio
     );
     final resizedImageRawData = _ImageEncoder.encoder.encodeImage(resizedImage);
 
@@ -152,7 +148,8 @@ class _ImageEncoder {
 class HashedImage {
   String? _imageHash;
   String? _temporaryImageFilePath;
-  Future<String> Function()? _futureHashFunction; //TODO: implement this shit
+
+  String? get imageHash => _imageHash;
 
   /// Createa a [HashedImage] with
   /// 1)  An already calculated (by [ImageManager])
@@ -162,20 +159,15 @@ class HashedImage {
       : _imageHash = imageHash,
         _temporaryImageFilePath = temporaryFilePath;
 
-  String? get imageHash => _imageHash;
+  @override
+  operator ==(Object other) =>
+      other is HashedImage &&
+      _imageHash == other._imageHash &&
+      _temporaryImageFilePath == other._temporaryImageFilePath;
 
-  Future<String?> get futureHash async {
-    if (_futureHashFunction != null) {
-      setImageHash(await _futureHashFunction!());
-      _futureHashFunction = null;
-    }
-    return _imageHash;
-  }
-
-  void startHash(Future<String> Function() hashFunction) {
-    _futureHashFunction = hashFunction;
-    hashFunction();
-  }
+  @override
+  int get hashCode =>
+      hashCodeFromObjects([_imageHash, _temporaryImageFilePath]);
 
   void setImageHash(String newHash) {
     _imageHash = newHash;

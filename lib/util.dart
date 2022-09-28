@@ -226,11 +226,7 @@ class Date {
 
   @override
   int get hashCode {
-    int result = 17;
-    result = 37 * result + day.hashCode;
-    result = 37 * result + month.hashCode;
-    result = 37 * result + year.hashCode;
-    return result;
+    return hashCodeFromObjects([day, month, year]);
   }
 
   DateTime toDateTime() {
@@ -328,4 +324,43 @@ abstract class Singleton<T> {
   T getInstance() {
     return _singleInstance ?? buildNew();
   }
+}
+
+Future<bool?> showConfirmDialog({
+  required BuildContext context,
+  String? title,
+  Widget? acceptWidget,
+  Widget? denyWidget,
+  required String description,
+}) async {
+  title ??= "Oletko varma?";
+  acceptWidget ??= const Text("Kyllä");
+  denyWidget ??= const Text("Ei");
+  return showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(title!),
+        content: Text(description),
+        actions: [
+          ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: denyWidget),
+          ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: acceptWidget)
+        ],
+      );
+    },
+  );
+}
+
+///This might have poor performance because we're creating a list for each call
+///Variable length arguments aren't supported as on now though.
+int hashCodeFromObjects(List<Object?> objects) {
+  int hashCode = 17;
+  for (Object? object in objects) {
+    hashCode = 37 * hashCode + (object != null ? object.hashCode : 0);
+  }
+  return hashCode;
 }
