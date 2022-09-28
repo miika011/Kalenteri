@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'package:kalenteri/activities.dart';
 import 'package:kalenteri/add_activity/add_activity_view.dart';
@@ -20,19 +21,20 @@ class WeekWidget extends StatefulWidget {
 
   static const borderShadeFactor = 0.8;
   static const addActivityTransitionDuration = Duration(milliseconds: 250);
-  final GlobalKey draggableKey = GlobalKey();
+  final GlobalKey draggedKey = GlobalKey();
 }
 
 class _WeekWidgetState extends State<WeekWidget> {
   bool _isAddingActivities = false;
-  bool _isScrolling = false;
   ActivityDragStatus? activityDragStatus;
   late final ScrollController _scrollController;
 
   bool get isDraggingActivity => activityDragStatus != null;
+  void stopDragging() => activityDragStatus = null;
+
   bool _doesAddButtonSurroundDraggedActivity(
       {required int addButtonIndex, required Date addButtonDate}) {
-    if (activityDragStatus == null ||
+    if (!isDraggingActivity ||
         addButtonDate != activityDragStatus!.draggedActivity.date) return false;
     final offset = addButtonIndex - activityDragStatus!.hoveredOnIndex;
     return offset == 0 || offset == 1;
@@ -135,44 +137,31 @@ class _WeekWidgetState extends State<WeekWidget> {
     List<List<Widget>> gridRows =
         generateGridRows(dayInTheWeek, context: context);
 
-    return NotificationListener(
-      onNotification: (notification) {
-        if (notification is ScrollStartNotification) {
-          setState(() {
-            _isScrolling = true;
-          });
-        } else if (notification is ScrollEndNotification) {
-          setState(() {
-            _isScrolling = false;
-          });
-        }
-        return false;
-      },
-      child: Scrollbar(
-          controller: _scrollController,
-          //key: ValueKey(dayInTheWeek),
-          child: ListView.builder(
-            controller: _scrollController,
-            //physics: const BouncingScrollPhysics(),
-            itemCount: gridRows.length,
-            itemBuilder: ((context, index) {
-              return AnimatedContainer(
-                width: MediaQuery.of(context).size.width,
-                height: index.isEven
-                    ? (_isAddingActivities
-                        ? layout.addButtonEnabledHeight(context)
-                        : layout.addButtonDisabledHeight(context))
-                    : (_isAddingActivities
-                        ? layout.activityHeightWhenAdding(context)
-                        : layout.activityHeight(context)),
-                duration: WeekWidget.addActivityTransitionDuration,
-                curve: Curves.easeInBack,
-                child: Row(
-                  children: gridRows[index],
-                ),
-              );
-            }),
-          )),
+    return Scrollbar(
+      controller: _scrollController,
+      //key: ValueKey(dayInTheWeek),
+      child: ListView.builder(
+        controller: _scrollController,
+        //physics: const BouncingScrollPhysics(),
+        itemCount: gridRows.length,
+        itemBuilder: ((context, index) {
+          return AnimatedContainer(
+            width: MediaQuery.of(context).size.width,
+            height: index.isEven
+                ? (_isAddingActivities
+                    ? layout.addButtonEnabledHeight(context)
+                    : layout.addButtonDisabledHeight(context))
+                : (_isAddingActivities
+                    ? layout.activityHeightWhenAdding(context)
+                    : layout.activityHeight(context)),
+            duration: WeekWidget.addActivityTransitionDuration,
+            curve: Curves.easeInBack,
+            child: Row(
+              children: gridRows[index],
+            ),
+          );
+        }),
+      ),
     );
   }
 
@@ -204,9 +193,7 @@ class _WeekWidgetState extends State<WeekWidget> {
     Widget content;
     if (index < activitiesForDay.length) {
       final activity = activitiesForDay[index];
-      final ActivityWidget activityWidget = ActivityWidget(activity);
 
-      final headerText = (index + 1).toString();
       content = GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () {
@@ -214,73 +201,77 @@ class _WeekWidgetState extends State<WeekWidget> {
             openActivityDetailsDialog(activity, index);
           }
         },
-        child: LongPressDraggable<Activity>(
-          onDragCompleted: () {
-            // showSnack(context, "Drag complete");
-            setState(() {
-              LogBook().deleteActivity(date: date, index: index);
-              LogBook().addActivity(
-                  activity: Activity(
-                      date: activityDragStatus!.hoveredOnDate,
-                      hashedImage: activity.hashedImage,
-                      text: activity.text),
-                  index: activityDragStatus!.hoveredOnIndex);
+        child: _isAddingActivities
+            ? DraggedActivity(
+                scrollController: _scrollController,
+                draggingKey: widget.draggedKey,
+                activity: activity,
+                onDragCompleted: () {
+                  // showSnack(context, "Drag complete");
+                  setState(() {
+                    LogBook().deleteActivity(
+                        date: activityDragStatus!.draggedActivity.date,
+                        index: activityDragStatus!.draggedActivityIndex);
 
-              activityDragStatus = null;
-            });
-          },
-          onDragEnd: (details) {
-            // showSnack(context, "Drag end");
+                    final addIndex = activityDragStatus!.draggedActivity.date !=
+                                activityDragStatus!.hoveredOnDate ||
+                            activityDragStatus!.hoveredOnIndex < index
+                        ? activityDragStatus!.hoveredOnIndex
+                        : activityDragStatus!.hoveredOnIndex - 1;
 
-            if (!details.wasAccepted) {
-              setState(() {
-                activityDragStatus = null;
-              });
-            }
-          },
-          onDragStarted: () {
-            // showSnack(context, "Drag started");
-            setState(() {
-              activityDragStatus = ActivityDragStatus(
-                  draggedActivityIndex: index,
-                  draggedActivity: activity,
-                  hoveredOnDate: date,
-                  hoveredOnIndex: index);
-            });
-          },
-          onDraggableCanceled: (velocity, offset) {
-            showSnack(context, "Drag canceled");
-          },
-          maxSimultaneousDrags: 1,
-          childWhenDragging: Container(),
-          //delay: const Duration(seconds: 5),
-          data: activity,
-          dragAnchorStrategy: pointerDragAnchorStrategy,
-          feedback: SizedBox(
-            width: width * 0.6,
-            height: layout.activityHeight(context) * 0.6,
-            child: DraggingActivity(
-              draggingKey: widget.draggableKey,
-              activity: activity,
-            ),
-          ),
-          child: ActivityWidget(
-            activity,
-            headerText: headerText,
-          ),
-        ),
+                    LogBook().addActivity(
+                        activity: Activity(
+                            date: activityDragStatus!.hoveredOnDate,
+                            hashedImage: activity.hashedImage,
+                            text: activity.text),
+                        index: addIndex);
+
+                    stopDragging();
+                  });
+                },
+                onDragEnd: (details) {
+                  // showSnack(context, "Drag end");
+
+                  if (!details.wasAccepted) {
+                    setState(() {
+                      stopDragging();
+                    });
+                  }
+                },
+                onDragStarted: () {
+                  // showSnack(context, "Drag started");
+                  setState(() {
+                    activityDragStatus = ActivityDragStatus(
+                        draggedActivityIndex: index,
+                        draggedActivity: activity,
+                        hoveredOnDate: activity.date,
+                        hoveredOnIndex: index);
+                  });
+                },
+                onDraggableCanceled: (velocity, offset) {
+                  showSnack(context, "Drag canceled");
+                  setState(() {
+                    stopDragging();
+                  });
+                },
+                sizeWhenDragged: Size(
+                    MediaQuery.of(context).size.width /
+                        DateTime.daysPerWeek *
+                        0.75,
+                    layout.activityHeight(context) * 0.75))
+            : ActivityWidget(activity),
       );
-
-      ;
     } else {
       final blankActivity = ActivityWidget(Activity(date: date));
-      content = isDraggingActivity && index <= activitiesForDay.length
+      content = ((isDraggingActivity && index <= activitiesForDay.length) &&
+              activityDragStatus!.draggedActivity.date != date)
           ? dragTarget(
               index: index,
               date: date,
               child: AnimatedOverlayColor(
-                  color1: const Color.fromARGB(19, 33, 149, 243),
-                  color2: const Color.fromARGB(113, 33, 149, 243),
+                  duration: const Duration(milliseconds: 750),
+                  color1: const Color.fromARGB(45, 33, 149, 243),
+                  color2: const Color.fromARGB(145, 33, 149, 243),
                   child: blankActivity),
             )
           : blankActivity;
@@ -296,6 +287,64 @@ class _WeekWidgetState extends State<WeekWidget> {
       ),
     );
   }
+
+  // LongPressDraggable<Activity> draggableActivity(
+  //     {required int index, required Activity activity}) {
+  //   return LongPressDraggable<Activity>(
+  //     onDragCompleted: () {
+  //       // showSnack(context, "Drag complete");
+  //       setState(() {
+  //         LogBook().deleteActivity(date: activity.date, index: index);
+  //         LogBook().addActivity(
+  //             activity: Activity(
+  //                 date: activityDragStatus!.hoveredOnDate,
+  //                 hashedImage: activity.hashedImage,
+  //                 text: activity.text),
+  //             index: activityDragStatus!.hoveredOnIndex);
+
+  //         activityDragStatus = null;
+  //       });
+  //     },
+  //     onDragEnd: (details) {
+  //       // showSnack(context, "Drag end");
+
+  //       if (!details.wasAccepted) {
+  //         setState(() {
+  //           activityDragStatus = null;
+  //         });
+  //       }
+  //     },
+  //     onDragStarted: () {
+  //       // showSnack(context, "Drag started");
+  //       setState(() {
+  //         activityDragStatus = ActivityDragStatus(
+  //             draggedActivityIndex: index,
+  //             draggedActivity: activity,
+  //             hoveredOnDate: activity.date,
+  //             hoveredOnIndex: index);
+  //       });
+  //     },
+  //     onDraggableCanceled: (velocity, offset) {
+  //       showSnack(context, "Drag canceled");
+  //     },
+  //     maxSimultaneousDrags: 1,
+  //     childWhenDragging: Container(),
+  //     //delay: const Duration(seconds: 5),
+  //     data: activity,
+  //     dragAnchorStrategy: pointerDragAnchorStrategy,
+  //     feedback: SizedBox(
+  //       width: MediaQuery.of(context).size.width / DateTime.daysPerWeek * 0.75,
+  //       height: layout.activityHeight(context) * 0.75,
+  //       child: DraggedActivity(
+  //         draggingKey: widget.draggedKey,
+  //         activity: activity,
+  //       ),
+  //     ),
+  //     child: ActivityWidget(
+  //       activity,
+  //     ),
+  //   );
+  // }
 
   Future<dynamic> openActivityDetailsDialog(Activity activity, int index) {
     return Navigator.of(context)
@@ -331,14 +380,8 @@ class _WeekWidgetState extends State<WeekWidget> {
   DragTarget<Activity> dragTarget(
       {required int index, required Date date, required Widget child}) {
     return DragTarget<Activity>(
-      onWillAccept: (activity) {
-        if (activity == null) return false;
-        final willAccept = !_doesAddButtonSurroundDraggedActivity(
-            addButtonIndex: index, addButtonDate: date);
-        return willAccept;
-      },
       onMove: (details) {
-        if (activityDragStatus == null) return;
+        if (!isDraggingActivity) return;
         setState(
           () {
             activityDragStatus!.hoveredOnDate = date;
@@ -430,9 +473,7 @@ class DayHeaderWidget extends StatelessWidget {
 }
 
 class ActivityWidget extends StatelessWidget {
-  const ActivityWidget(this.activity, {Key? key, String? headerText})
-      : _headerText = headerText,
-        super(key: key);
+  const ActivityWidget(this.activity, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -456,8 +497,6 @@ class ActivityWidget extends StatelessWidget {
   String get text => activity.text.trim();
   bool get hasText => text != "";
 
-  String get headerText => _headerText ?? "";
-
   Widget get _imageWidget {
     if (activity.hashedImage.imageFilePath == null) return Container();
     return Image(
@@ -477,29 +516,132 @@ class ActivityWidget extends StatelessWidget {
   }
 
   final Activity activity;
-
-  final String? _headerText;
 }
 
-class DraggingActivity extends StatelessWidget {
-  const DraggingActivity(
-      {Key? key, required this.draggingKey, required this.activity})
+class DraggedActivity extends StatefulWidget {
+  const DraggedActivity(
+      {Key? key,
+      required this.draggingKey,
+      required this.activity,
+      required this.onDragCompleted,
+      required this.onDragEnd,
+      required this.onDragStarted,
+      required this.onDraggableCanceled,
+      required this.sizeWhenDragged,
+      required this.scrollController})
       : super(key: key);
 
   final GlobalKey draggingKey;
   final Activity activity;
+  final Size sizeWhenDragged;
+  final VoidCallback onDragCompleted;
+  final void Function(DraggableDetails details) onDragEnd;
+  final VoidCallback onDragStarted;
+  final void Function(Velocity, Offset) onDraggableCanceled;
+  final ScrollController scrollController;
+
+  @override
+  State<StatefulWidget> createState() {
+    return _DraggedActivityState();
+  }
+}
+
+class _DraggedActivityState extends State<DraggedActivity>
+    with SingleTickerProviderStateMixin {
+  bool _isScrolling = false;
+  _Direction _scrollDirection = _Direction.down;
+  late final Ticker _ticker;
+  static const scrollDeltaY = 10.0;
+
+  void startScrolling(_Direction direction) {
+    setState(() {
+      _isScrolling = true;
+      _scrollDirection = direction;
+    });
+  }
+
+  void stopScrolling() {
+    setState(() {
+      _isScrolling = false;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker((elapsed) {
+      if (_isScrolling) {
+        final delta =
+            _scrollDirection == _Direction.down ? scrollDeltaY : -scrollDeltaY;
+        //print("Scrolling $_scrollDirection");
+        setState(() {
+          widget.scrollController.jumpTo(clamp(
+              widget.scrollController.offset + delta,
+              min: 0.0,
+              max: widget.scrollController.position.maxScrollExtent));
+        });
+      }
+    });
+    _ticker.start();
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: FractionalTranslation(
-        translation: const Offset(-0.55, -0.55),
-        child:
-            SizedBox(width: 200, height: 200, child: ActivityWidget(activity)),
+    return LongPressDraggable<Activity>(
+      onDragUpdate: (details) {
+        final screenSize = MediaQuery.of(context).size;
+        final scrollTreshold = 0.77 * screenSize.height;
+        if (details.globalPosition.dy >= scrollTreshold) {
+          startScrolling(_Direction.down);
+        } else if (details.globalPosition.dy <=
+            screenSize.height - scrollTreshold) {
+          startScrolling(_Direction.up);
+        } else if (_isScrolling) {
+          stopScrolling();
+        }
+      },
+      onDragCompleted: widget.onDragCompleted,
+      onDragEnd: widget.onDragEnd,
+      onDragStarted: widget.onDragStarted,
+      onDraggableCanceled: widget.onDraggableCanceled,
+      maxSimultaneousDrags: 1,
+      childWhenDragging: Container(),
+      data: widget.activity,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: SizedBox.fromSize(
+        size: widget.sizeWhenDragged,
+        child: FractionalTranslation(
+          translation: const Offset(-0.5, -0.5),
+          child: ActivityWidget(
+            widget.activity,
+            key: widget.draggingKey,
+          ),
+        ),
+      ),
+      child: ActivityWidget(
+        widget.activity,
       ),
     );
   }
+
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Expanded(
+  //     child: FractionalTranslation(
+  //       translation: const Offset(-0.5, -0.5),
+  //       child: ActivityWidget(activity),
+  //     ),
+  //   );
+  // }
 }
+
+enum _Direction { up, down }
 
 class AddActivityButton extends StatelessWidget {
   const AddActivityButton(
@@ -604,7 +746,7 @@ abstract class Layout {
   }
 
   int _clampColorValue(int colorValue) {
-    return clamp(colorValue, 0, 255);
+    return clamp(colorValue, min: 0, max: 255);
   }
 
   get addButtonBackgroundColor {
@@ -673,7 +815,7 @@ class LayoutForPortrait extends Layout {
 
   @override
   double addButtonEnabledHeight(BuildContext context) {
-    return addButtonDisabledHeight(context) * 5;
+    return addButtonDisabledHeight(context) * 10;
   }
 
   @override

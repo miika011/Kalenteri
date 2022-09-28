@@ -307,7 +307,7 @@ double fontSizeFraction(BuildContext context,
       MediaQuery.of(context).size.height * fractionOfScreenHeight);
 }
 
-T clamp<T extends Comparable>(T value, T min, T max) {
+T clamp<T extends Comparable>(T value, {required T min, required T max}) {
   if (value.compareTo(max) > 0) {
     return max;
   } else if (value.compareTo(min) < 0) {
