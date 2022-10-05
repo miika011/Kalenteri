@@ -2,7 +2,6 @@
 from operator import le
 import util
 import os
-import shutil
 
 PROJECT_ROOT = os.path.join(util.getScriptDirectory(),"../../..")
 os.chdir(PROJECT_ROOT)
@@ -12,6 +11,5 @@ outPath = "./lib/autogen"
 if not os.path.isdir(outPath):
     os.makedirs(outPath)
 
-
-
+outFile = os.path.join(outPath, "symbol_assets_generated.dart")
 
