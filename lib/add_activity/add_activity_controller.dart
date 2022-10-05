@@ -51,7 +51,6 @@ class ActivityTextBox extends StatefulWidget {
 
   final void Function(BuildContext context) onLostFocus;
   final void Function(BuildContext context, {String? newValue}) onTextChanged;
-  final TextStyle? _textStyle;
   const ActivityTextBox({
     Key? key,
     this.initialText,
@@ -60,17 +59,19 @@ class ActivityTextBox extends StatefulWidget {
     required this.onLostFocus,
     required this.onTextChanged,
     TextStyle? textStyle,
-  })  : _textStyle = textStyle,
-        super(key: key);
+  }) : super(key: key);
 
   @override
   State<ActivityTextBox> createState() => _ActivityTextBoxState();
 
   TextStyle? textStyle(BuildContext context) {
-    return _textStyle ??
-        Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontFamily: "Courgette",
-            fontSize: fontSizeFraction(context, fractionOfScreenHeight: 0.04));
+    return Theme.of(context).textTheme.titleLarge?.copyWith(
+        fontFamily: "Courgette",
+        fontSize: fontSizeFraction(context,
+            fractionOfScreenHeight:
+                MediaQuery.of(context).orientation == Orientation.portrait
+                    ? 0.04
+                    : 0.08));
   }
 }
 

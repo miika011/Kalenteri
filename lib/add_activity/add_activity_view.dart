@@ -374,15 +374,7 @@ class ActivityTextDialog extends StatelessWidget {
                   SizedBox(
                     width: sizeForTextBox(context).width,
                     height: safeAreaHeight * 0.75,
-                    child: Theme(
-                        data: ThemeData(
-                          textTheme: TextTheme(
-                            bodyMedium: TextStyle(
-                              fontSize: getFontSize(context),
-                            ),
-                          ),
-                        ),
-                        child: logicController.textBox),
+                    child: logicController.textBox,
                   ),
                   SizedBox(
                     width: sizeForAcceptCancelButtons(context).width,
@@ -396,12 +388,6 @@ class ActivityTextDialog extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  double getFontSize(BuildContext context) {
-    return MediaQuery.of(context).orientation == Orientation.portrait
-        ? pixelsToFontSizeEstimate(MediaQuery.of(context).size.height * 0.04)
-        : pixelsToFontSizeEstimate(MediaQuery.of(context).size.height * 0.08);
   }
 
   double get verticalPaddingAmount => 10;
@@ -424,15 +410,6 @@ class ActivityTextDialog extends StatelessWidget {
     final width = MediaQuery.of(context).size.width * 0.1;
     final height = width;
     return Size(width, height);
-  }
-
-  double fontSize(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    if (MediaQuery.of(context).orientation == Orientation.portrait) {
-      return pixelsToFontSizeEstimate(screenHeight * 0.05);
-    } else {
-      return pixelsToFontSizeEstimate(screenHeight * 0.08);
-    }
   }
 
   Size sizeForTextBox(BuildContext context) {

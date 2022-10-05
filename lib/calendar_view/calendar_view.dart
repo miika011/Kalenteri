@@ -910,7 +910,7 @@ class LayoutForPortrait extends Layout {
   @override
   double floatingAddButtonIconSize(BuildContext context) {
     return pixelsToFontSizeEstimate(
-        floatingAddButtonWidthAndHeight(context) * 0.5);
+        floatingAddButtonWidthAndHeight(context) * 0.4);
   }
 
   @override
