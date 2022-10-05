@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.kalenteri">
+    package="com.miika.seppala.Viikkokalenteri">
     <uses-permission android:name="android.permission.CAMERA"/>
    <application
-        android:label="kalenteri"
+        android:label="Viikkokalenteri"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

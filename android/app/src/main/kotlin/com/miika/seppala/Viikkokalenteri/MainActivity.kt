@@ -1,4 +1,4 @@
-package com.example.kalenteri
+package com.miika.seppala.Viikkokalenteri
 
 import io.flutter.embedding.android.FlutterActivity
 

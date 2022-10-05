@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:kalenteri/add_activity/add_activity_controller.dart';
-import 'package:kalenteri/add_activity/add_activity_view.dart';
-import 'package:kalenteri/util.dart';
+import 'package:Viikkokalenteri/add_activity/add_activity_controller.dart';
+import 'package:Viikkokalenteri/add_activity/add_activity_view.dart';
+import 'package:Viikkokalenteri/util.dart';
 import 'dart:io';
 
 import '../activities.dart';

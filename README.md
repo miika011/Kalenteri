@@ -1,4 +1,4 @@
-# kalenteri
+# Viikkokalenteri
 
 MOI inspired calendar app
 

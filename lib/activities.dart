@@ -1,7 +1,6 @@
 import 'dart:math';
-
-import 'package:kalenteri/image_manager.dart';
-import 'package:kalenteri/util.dart';
+import 'package:Viikkokalenteri/image_manager.dart';
+import 'package:Viikkokalenteri/util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 

@@ -1,11 +1,11 @@
 {
-    "name": "kalenteri",
-    "short_name": "kalenteri",
+    "name": "Viikkokalenteri",
+    "short_name": "Viikkoalenteri",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Helppokäyttöinen viikkokalenteri kuva- ja/tai kirjoitusmerkinnöillä.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

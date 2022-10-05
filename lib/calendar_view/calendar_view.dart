@@ -4,12 +4,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import 'package:kalenteri/activities.dart';
-import 'package:kalenteri/add_activity/add_activity_view.dart';
-import 'package:kalenteri/animations/animated_box_border.dart';
-import 'package:kalenteri/animations/animated_overlay_color.dart';
-import 'package:kalenteri/calendar_view/activity_details.dart';
-import 'package:kalenteri/util.dart';
+import 'package:Viikkokalenteri/activities.dart';
+import 'package:Viikkokalenteri/add_activity/add_activity_view.dart';
+import 'package:Viikkokalenteri/animations/animated_box_border.dart';
+import 'package:Viikkokalenteri/animations/animated_overlay_color.dart';
+import 'package:Viikkokalenteri/calendar_view/activity_details.dart';
+import 'package:Viikkokalenteri/util.dart';
 
 class WeekWidget extends StatefulWidget {
   final Date dayInTheWeek;

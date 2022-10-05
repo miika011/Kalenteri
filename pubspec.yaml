@@ -45,6 +45,7 @@ dependencies:
 
 dev_dependencies:
   flutter_launcher_icons:
+  change_app_package_name:
   flutter_test:
     sdk: flutter
 

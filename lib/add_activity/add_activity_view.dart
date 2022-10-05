@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:kalenteri/util.dart';
+import 'package:Viikkokalenteri/util.dart';
 
 import '../activities.dart';
 import 'add_activity_controller.dart';
