@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:kalenteri/image_manager.dart';
+import 'package:Viikkokalenteri/image_manager.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../activities.dart';
-import '../assets.dart';
-import '../util.dart';
-import 'add_activity_view.dart';
+import 'package:Viikkokalenteri/activities.dart';
+import 'package:Viikkokalenteri/assets.dart';
+import 'package:Viikkokalenteri/util.dart';
+import 'package:Viikkokalenteri/add_activity/add_activity_view.dart';
 
 final _imagePicker = ImagePicker();
 

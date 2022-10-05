@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kalenteri/activities.dart';
-import 'package:kalenteri/util.dart';
+import 'package:Viikkokalenteri/activities.dart';
+import 'package:Viikkokalenteri/util.dart';
 import 'calendar_view/calendar_view.dart';
 import 'image_manager.dart';
 
