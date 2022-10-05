@@ -97,6 +97,7 @@ class _AddActivityInPortrait extends StatelessWidget {
                   padding: paddingForActivityTextBox(context),
                   child: SizedBox(
                     width: widthForActivityTextBox(context),
+                    height: heightForActivityTextBox(context),
                     child: logicController.textBox,
                   ),
                 ),
@@ -182,6 +183,10 @@ class _AddActivityInPortrait extends StatelessWidget {
 
   double widthForActivityTextBox(BuildContext context) {
     return 0.70 * MediaQuery.of(context).size.width;
+  }
+
+  double heightForActivityTextBox(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.3;
   }
 
   EdgeInsets paddingForActivityTextBox(BuildContext context) {
@@ -341,6 +346,14 @@ class ActivityTextDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final safeAreaHeight = max(
+        (mq.size.height -
+            mq.padding.top -
+            mq.padding.bottom -
+            mq.viewInsets.top -
+            mq.viewInsets.bottom),
+        0);
     return SafeArea(
       child: Scaffold(
         resizeToAvoidBottomInset: false,
@@ -351,7 +364,7 @@ class ActivityTextDialog extends StatelessWidget {
             child: SingleChildScrollView(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(
                     width: sizeForAcceptCancelButtons(context).width,
@@ -360,7 +373,7 @@ class ActivityTextDialog extends StatelessWidget {
                   ),
                   SizedBox(
                     width: sizeForTextBox(context).width,
-                    height: sizeForTextBox(context).height,
+                    height: safeAreaHeight * 0.75,
                     child: Theme(
                         data: ThemeData(
                           textTheme: TextTheme(
@@ -439,12 +452,5 @@ class ActivityTextDialog extends StatelessWidget {
   Size sizeForTextBoxPortrait(BuildContext context) {
     return Size(MediaQuery.of(context).size.width * 0.55,
         MediaQuery.of(context).size.height * 0.5);
-  }
-
-  double getAvailableHeight(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final availableHeight =
-        max(0.0, mq.size.height - mq.viewInsets.bottom - mq.viewInsets.top);
-    return availableHeight;
   }
 }

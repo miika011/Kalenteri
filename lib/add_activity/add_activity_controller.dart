@@ -67,7 +67,106 @@ class ActivityTextBox extends StatefulWidget {
   State<ActivityTextBox> createState() => _ActivityTextBoxState();
 
   TextStyle? textStyle(BuildContext context) {
-    return _textStyle ?? Theme.of(context).textTheme.bodyMedium;
+    return _textStyle ??
+        Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontFamily: "Courgette",
+            fontSize: fontSizeFraction(context, fractionOfScreenHeight: 0.04));
+  }
+}
+
+class _ActivityTextBoxState extends State<ActivityTextBox> {
+  bool _hadFocusPreviously = false;
+
+  final focusNode = FocusNode();
+
+  late final TextEditingController textController;
+
+  String get activityTextInputHint => "Kerro tapahtumasta:";
+
+  bool get hasFocus => focusNode.hasFocus;
+
+  bool get hasText => text.trim().isNotEmpty;
+
+  String get text {
+    return textController.text;
+  }
+
+  @override
+  void dispose() {
+    focusNode.removeListener(focusChanged);
+    focusNode.dispose();
+    textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    focusNode.addListener(focusChanged);
+    textController = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: decoration(context),
+      child: TextField(
+        onChanged: (String? newValue) =>
+            widget.onTextChanged(context, newValue: newValue),
+        autofocus: widget.autoFocusText,
+        textCapitalization: TextCapitalization.sentences,
+        focusNode: focusNode,
+        controller: textController,
+        expands: true,
+        minLines: null,
+        maxLines: null,
+        style: widget.textStyle(context),
+        decoration: InputDecoration(
+            hintText: activityTextInputHint,
+            border: InputBorder.none,
+            hintMaxLines: 2),
+      ),
+    );
+  }
+
+  void clearText() {
+    setState(() {
+      textController.clear();
+    });
+  }
+
+  BoxDecoration decoration(BuildContext context) {
+    return BoxDecoration(
+      border: Border.all(width: 1.5),
+      borderRadius: BorderRadius.circular(10),
+      boxShadow: const [
+        BoxShadow(
+          color: Color.fromARGB(25, 0, 0, 0),
+          blurRadius: 5,
+          spreadRadius: 5,
+        ),
+      ],
+    );
+  }
+
+  void focusChanged() {
+    if (_hadFocusPreviously != focusNode.hasFocus) {
+      setState(() {
+        _hadFocusPreviously = focusNode.hasFocus;
+        focusNode.hasFocus
+            ? widget.onGainedFocus(context)
+            : widget.onLostFocus(context);
+      });
+    }
+  }
+
+  void setText(String newValue) => setState(() {
+        textController.text = newValue;
+      });
+  void unFocus() {
+    setState(() {
+      focusNode.unfocus();
+    });
   }
 }
 
@@ -149,7 +248,7 @@ class AddActivityController {
     return getActivity();
   }
 
-  void onPressedAccept<T>(BuildContext context,
+  void onPressedAccept(BuildContext context,
       {required AcceptButtonStatus buttonStatus}) {
     switch (_acceptButtonKey.currentState?.buttonStatus) {
 
@@ -326,8 +425,8 @@ class _CameraButtonState extends State<CameraButton> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: _isEnabled ? decorationForButtons(context: context) : null,
+    return Card(
+      //decoration: _isEnabled ? decorationForButtons(context: context) : null,
       child: FittedBox(
         fit: BoxFit.cover,
         child: IconButton(
@@ -355,8 +454,8 @@ class CancelButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: decorationForButtons(context: context),
+    return Card(
+      //decoration: decorationForButtons(context: context),
       child: FittedBox(
         fit: BoxFit.cover,
         child: IconButton(
@@ -409,8 +508,8 @@ class GalleryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: decorationForButtons(context: context),
+    return Card(
+      //decoration: decorationForButtons(context: context),
       child: FittedBox(
         fit: BoxFit.cover,
         child: IconButton(
@@ -455,6 +554,15 @@ class TextDialogController extends AddActivityController {
   }
 
   @override
+  void updateAcceptButtonStatus() {
+    if (!textHasFocus) {
+      setAcceptButtonStatus(AcceptButtonStatus.acceptAndReturn);
+    } else {
+      setAcceptButtonStatus(AcceptButtonStatus.acceptText);
+    }
+  }
+
+  @override
   ActivityTextBox get textBox => ActivityTextBox(
         onGainedFocus: onTextFocusGained,
         onLostFocus: onTextFocusLost,
@@ -494,8 +602,8 @@ class _AcceptButtonState extends State<AcceptButton> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: decorationForButtons(context: context),
+    return Card(
+      //decoration: decorationForButtons(context: context),
       child: FittedBox(
         fit: BoxFit.cover,
         child: IconButton(
@@ -560,98 +668,6 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
     setState(() {
       _hashedImage = ImageManager.instance.storeResized(
           imageFileToStore: imageFile, screenSize: MediaQuery.of(context).size);
-    });
-  }
-}
-
-class _ActivityTextBoxState extends State<ActivityTextBox> {
-  bool _hadFocusPreviously = false;
-
-  final focusNode = FocusNode();
-
-  late final TextEditingController textController;
-
-  String get activityTextInputHint => "Kerro tapahtumasta:";
-
-  bool get hasFocus => focusNode.hasFocus;
-
-  bool get hasText => text.trim().isNotEmpty;
-
-  String get text {
-    return textController.text;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: decoration(context),
-      child: TextField(
-        onChanged: (String? newValue) =>
-            widget.onTextChanged(context, newValue: newValue),
-        autofocus: widget.autoFocusText,
-        textCapitalization: TextCapitalization.sentences,
-        focusNode: focusNode,
-        controller: textController,
-        style: widget.textStyle(context),
-        maxLines: 5,
-        decoration: InputDecoration(
-            hintText: activityTextInputHint, border: InputBorder.none),
-      ),
-    );
-  }
-
-  void clearText() {
-    setState(() {
-      textController.clear();
-    });
-  }
-
-  BoxDecoration decoration(BuildContext context) {
-    return BoxDecoration(
-      border: Border.all(width: 1.5),
-      borderRadius: BorderRadius.circular(10),
-      boxShadow: const [
-        BoxShadow(
-          color: Color.fromARGB(25, 0, 0, 0),
-          blurRadius: 5,
-          spreadRadius: 5,
-        ),
-      ],
-    );
-  }
-
-  @override
-  void dispose() {
-    focusNode.removeListener(focusChanged);
-    focusNode.dispose();
-    textController.dispose();
-    super.dispose();
-  }
-
-  void focusChanged() {
-    if (_hadFocusPreviously != focusNode.hasFocus) {
-      setState(() {
-        _hadFocusPreviously = focusNode.hasFocus;
-        focusNode.hasFocus
-            ? widget.onGainedFocus(context)
-            : widget.onLostFocus(context);
-      });
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    focusNode.addListener(focusChanged);
-    textController = TextEditingController(text: widget.initialText);
-  }
-
-  void setText(String newValue) => setState(() {
-        textController.text = newValue;
-      });
-  void unFocus() {
-    setState(() {
-      focusNode.unfocus();
     });
   }
 }

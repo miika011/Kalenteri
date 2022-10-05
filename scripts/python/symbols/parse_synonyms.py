@@ -18,7 +18,7 @@ class Synonym:
         self.relatedWords = relatedWords
 
 class SynonymHtmlFileParser:
-    wordsPattern = re.compile(r"<h2><span>Synonyymit sanalle (.+?)</span></h2>")
+    wordPattern = re.compile(r"<title>(.+) synonyymit - Synonyymit.fi</title>")
     genericLineString = r'^<ul class="%s">\n(.+)\n'
     synonymsLinePattern = re.compile(genericLineString %("first"), re.MULTILINE)
     closestWordsLinePattern = re.compile(genericLineString %("sec"), re.MULTILINE)
@@ -42,8 +42,8 @@ class SynonymHtmlFileParser:
         return []
 
     def getWord(htmlStr):
-        match = SynonymHtmlFileParser.wordsPattern.search(htmlStr)
-        word = match.group(1)
+        match = SynonymHtmlFileParser.wordPattern.search(htmlStr)
+        word = str.lower(match.group(1))
         return word
     
     def getSynonyms(htmlStr):
@@ -60,11 +60,11 @@ class SynonymHtmlFileParser:
     def parse(htmlFilePath):
         with codecs.open(htmlFilePath , mode= "r", encoding="utf-8") as f:
             htmlStr = f.read()
-            p = SynonymHtmlFileParser
-            word = p.getWord(htmlStr)
-            synonyms = p.getSynonyms(htmlStr)
-            closestWords = p.getClosestWords(htmlStr)
-            relatedWords = p.getRelatedWords(htmlStr)
+            parser = SynonymHtmlFileParser
+            word = parser.getWord(htmlStr)
+            synonyms = parser.getSynonyms(htmlStr)
+            closestWords = parser.getClosestWords(htmlStr)
+            relatedWords = parser.getRelatedWords(htmlStr)
             return Synonym(word=word, relatedWords=relatedWords,closestWords=closestWords,synonyms=synonyms)
 
 if __name__ == "__main__":
@@ -80,7 +80,9 @@ if __name__ == "__main__":
             synonyms[synonym.word] = synonym
         except:
             fuckedUp.append(filePath)
+            
     if fuckedUp:
-        print(f"Failed to parse files {'\n'.join(fuckedUp)}")
+        filesFuckedUp = '\n'.join(fuckedUp)
+        print(f"Failed to parse files {filesFuckedUp}")
         
 

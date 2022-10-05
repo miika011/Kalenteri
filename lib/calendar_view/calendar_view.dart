@@ -12,22 +12,29 @@ import 'package:kalenteri/calendar_view/activity_details.dart';
 import 'package:kalenteri/util.dart';
 
 class WeekWidget extends StatefulWidget {
-  WeekWidget(this.dayInTheWeek, {Key? key}) : super(key: key);
-
-  @override
-  State<WeekWidget> createState() => _WeekWidgetState();
-
   final Date dayInTheWeek;
 
   static const borderShadeFactor = 0.8;
   static const addActivityTransitionDuration = Duration(milliseconds: 250);
+  static const addActivityTransitionCurve = Curves.easeInBack;
+  static const highlightColor1 = Color.fromARGB(178, 33, 255, 33);
+  static const highlightColor2 = Color.fromARGB(150, 22, 232, 85);
+  static const highlightAnimationDuration = Duration(milliseconds: 1000);
+
   final GlobalKey draggedKey = GlobalKey();
+
+  WeekWidget(this.dayInTheWeek, {Key? key}) : super(key: key);
+
+  @override
+  State<WeekWidget> createState() => _WeekWidgetState();
 }
 
-class _WeekWidgetState extends State<WeekWidget> {
+class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
   bool _isAddingActivities = false;
   ActivityDragStatus? activityDragStatus;
   late final ScrollController _scrollController;
+  bool _fadeFloatingAddButton = false;
+  double get _floatingAddButtonOpacity => _fadeFloatingAddButton ? 0.4 : 1.0;
 
   bool get isDraggingActivity => activityDragStatus != null;
   void stopDragging() => activityDragStatus = null;
@@ -36,7 +43,7 @@ class _WeekWidgetState extends State<WeekWidget> {
       {required int addButtonIndex, required Date addButtonDate}) {
     if (!isDraggingActivity ||
         addButtonDate != activityDragStatus!.draggedActivity.date) return false;
-    final offset = addButtonIndex - activityDragStatus!.hoveredOnIndex;
+    final offset = addButtonIndex - activityDragStatus!.draggedActivityIndex;
     return offset == 0 || offset == 1;
     //  | AddButton        | <- offset = 0
     //  | Dragged Activity |
@@ -63,20 +70,39 @@ class _WeekWidgetState extends State<WeekWidget> {
     layout = MediaQuery.of(context).orientation == Orientation.landscape
         ? LayoutForLandscape()
         : LayoutForPortrait();
+
     return Scaffold(
       body: SafeArea(
-        child: buildWeekView(context),
+        child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (event) => fadeFloatingAddButton(),
+            onPointerUp: (event) => showFloatingAddButton(),
+            onPointerCancel: (event) => showFloatingAddButton(),
+            child: buildWeekView(context)),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => setState(
-          () {
-            _isAddingActivities = !_isAddingActivities;
-          },
+      floatingActionButton: Opacity(
+        opacity: _floatingAddButtonOpacity,
+        child: SizedBox(
+          height: layout.floatingAddButtonWidthAndHeight(context),
+          width: layout.floatingAddButtonWidthAndHeight(context),
+          child: FloatingAddButton(
+            iconSize: layout.floatingAddButtonIconSize(context),
+            vsync: this,
+            onPressed: () => setState(
+              () {
+                _isAddingActivities = !_isAddingActivities;
+              },
+            ),
+          ),
         ),
-        child: const Icon(Icons.add),
       ),
     );
   }
+
+  void showFloatingAddButton() =>
+      setState(() => _fadeFloatingAddButton = false);
+
+  void fadeFloatingAddButton() => setState(() => _fadeFloatingAddButton = true);
 
   Column buildWeekView(BuildContext context) {
     return Column(
@@ -155,7 +181,7 @@ class _WeekWidgetState extends State<WeekWidget> {
                     ? layout.activityHeightWhenAdding(context)
                     : layout.activityHeight(context)),
             duration: WeekWidget.addActivityTransitionDuration,
-            curve: Curves.easeInBack,
+            curve: WeekWidget.addActivityTransitionCurve,
             child: Row(
               children: gridRows[index],
             ),
@@ -197,7 +223,7 @@ class _WeekWidgetState extends State<WeekWidget> {
       content = GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () {
-          if (!_isAddingActivities) {
+          if (_isAddingActivities) {
             openActivityDetailsDialog(activity, index);
           }
         },
@@ -249,7 +275,7 @@ class _WeekWidgetState extends State<WeekWidget> {
                   });
                 },
                 onDraggableCanceled: (velocity, offset) {
-                  showSnack(context, "Drag canceled");
+                  // showSnack(context, "Drag canceled");
                   setState(() {
                     stopDragging();
                   });
@@ -269,16 +295,17 @@ class _WeekWidgetState extends State<WeekWidget> {
               index: index,
               date: date,
               child: AnimatedOverlayColor(
-                  duration: const Duration(milliseconds: 750),
-                  color1: const Color.fromARGB(45, 33, 149, 243),
-                  color2: const Color.fromARGB(145, 33, 149, 243),
-                  child: blankActivity),
+                duration: WeekWidget.highlightAnimationDuration,
+                color1: WeekWidget.highlightColor1,
+                color2: WeekWidget.highlightColor2,
+                vsync: this,
+                child: blankActivity,
+              ),
             )
           : blankActivity;
     }
 
     return Container(
-      //padding: EdgeInsets.zero,
       decoration: layout.activityDecoration(date),
       child: SizedBox(
         height: layout.activityHeight(context),
@@ -287,64 +314,6 @@ class _WeekWidgetState extends State<WeekWidget> {
       ),
     );
   }
-
-  // LongPressDraggable<Activity> draggableActivity(
-  //     {required int index, required Activity activity}) {
-  //   return LongPressDraggable<Activity>(
-  //     onDragCompleted: () {
-  //       // showSnack(context, "Drag complete");
-  //       setState(() {
-  //         LogBook().deleteActivity(date: activity.date, index: index);
-  //         LogBook().addActivity(
-  //             activity: Activity(
-  //                 date: activityDragStatus!.hoveredOnDate,
-  //                 hashedImage: activity.hashedImage,
-  //                 text: activity.text),
-  //             index: activityDragStatus!.hoveredOnIndex);
-
-  //         activityDragStatus = null;
-  //       });
-  //     },
-  //     onDragEnd: (details) {
-  //       // showSnack(context, "Drag end");
-
-  //       if (!details.wasAccepted) {
-  //         setState(() {
-  //           activityDragStatus = null;
-  //         });
-  //       }
-  //     },
-  //     onDragStarted: () {
-  //       // showSnack(context, "Drag started");
-  //       setState(() {
-  //         activityDragStatus = ActivityDragStatus(
-  //             draggedActivityIndex: index,
-  //             draggedActivity: activity,
-  //             hoveredOnDate: activity.date,
-  //             hoveredOnIndex: index);
-  //       });
-  //     },
-  //     onDraggableCanceled: (velocity, offset) {
-  //       showSnack(context, "Drag canceled");
-  //     },
-  //     maxSimultaneousDrags: 1,
-  //     childWhenDragging: Container(),
-  //     //delay: const Duration(seconds: 5),
-  //     data: activity,
-  //     dragAnchorStrategy: pointerDragAnchorStrategy,
-  //     feedback: SizedBox(
-  //       width: MediaQuery.of(context).size.width / DateTime.daysPerWeek * 0.75,
-  //       height: layout.activityHeight(context) * 0.75,
-  //       child: DraggedActivity(
-  //         draggingKey: widget.draggedKey,
-  //         activity: activity,
-  //       ),
-  //     ),
-  //     child: ActivityWidget(
-  //       activity,
-  //     ),
-  //   );
-  // }
 
   Future<dynamic> openActivityDetailsDialog(Activity activity, int index) {
     return Navigator.of(context)
@@ -369,7 +338,23 @@ class _WeekWidgetState extends State<WeekWidget> {
         onPressed: () => onPressedAddActivity(date: date, index: index),
         layout: layout,
       );
-      return dragTarget(index: index, date: date, child: addButton);
+      final child = dragTarget(index: index, date: date, child: addButton);
+      return isDraggingActivity &&
+              !(_doesAddButtonSurroundDraggedActivity(
+                  addButtonDate: date, addButtonIndex: index))
+          ? AnimatedBoxBorder(
+              duration: WeekWidget.highlightAnimationDuration,
+              border1: Border.all(
+                color: WeekWidget.highlightColor1,
+              ),
+              border2: Border.all(
+                color: WeekWidget.highlightColor2,
+                width: 3.5,
+              ),
+              vsync: this,
+              child: child,
+            )
+          : child;
     } else {
       return Container(
         decoration: layout.addButtonDecoration,
@@ -390,18 +375,7 @@ class _WeekWidgetState extends State<WeekWidget> {
         );
       },
       builder: (context, candidateData, rejectedData) {
-        return isDraggingActivity &&
-                !(_doesAddButtonSurroundDraggedActivity(
-                    addButtonDate: date, addButtonIndex: index))
-            ? AnimatedBoxBorder(
-                border1: Border.all(
-                  color: const Color.fromARGB(19, 33, 149, 243),
-                ),
-                border2: Border.all(
-                    color: const Color.fromARGB(113, 33, 149, 243), width: 2.5),
-                child: child,
-              )
-            : child;
+        return child;
       },
     );
   }
@@ -418,6 +392,76 @@ class _WeekWidgetState extends State<WeekWidget> {
           LogBook().addActivity(activity: activity, index: index);
         }
       },
+    );
+  }
+}
+
+class FloatingAddButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final TickerProvider? vsync;
+  final double iconSize;
+
+  const FloatingAddButton(
+      {Key? key, this.vsync, required this.onPressed, required this.iconSize})
+      : super(key: key);
+
+  @override
+  State<FloatingAddButton> createState() => _FloatingAddButtonState();
+}
+
+class _FloatingAddButtonState extends State<FloatingAddButton>
+    with TickerProviderStateMixin {
+  late final AnimationController _rotateAnimationController;
+  late final Animation<double> _rotateAnimation;
+  late final TickerProvider vsync;
+
+  @override
+  void initState() {
+    super.initState();
+    vsync = widget.vsync ?? this;
+    _rotateAnimationController = AnimationController(
+      vsync: vsync,
+      duration: WeekWidget.addActivityTransitionDuration +
+          const Duration(milliseconds: 200),
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _rotateAnimationController.reset();
+        }
+      });
+    _rotateAnimation = _rotateAnimationController.drive(
+      Tween<double>(begin: 0.0, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOut)),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotateAnimationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RotationTransition(
+      turns: _rotateAnimation,
+      child: FloatingActionButton.extended(
+        onPressed: () {
+          _rotateAnimationController.forward();
+          widget.onPressed();
+        },
+        label: Row(
+          children: [
+            Icon(
+              Icons.edit,
+              size: widget.iconSize,
+            ),
+            Icon(
+              Icons.add,
+              size: widget.iconSize,
+            )
+          ],
+        ),
+      ),
     );
   }
 }
@@ -488,7 +532,7 @@ class ActivityWidget extends StatelessWidget {
               flex: hasImage ? 3 : 0,
               child:
                   Align(alignment: Alignment.topCenter, child: _imageWidget)),
-          Flexible(flex: hasText ? 1 : 0, child: _textWidget),
+          Flexible(flex: hasText ? 1 : 0, child: _textWidget(context)),
         ],
       ),
     );
@@ -504,15 +548,23 @@ class ActivityWidget extends StatelessWidget {
     );
   }
 
-  Widget get _textWidget => Text(
+  Widget _textWidget(BuildContext context) => Text(
         text,
-        style: textStyle,
+        style: textStyle(context),
+        overflow: TextOverflow.fade,
       );
 
   bool get hasImage => activity.hashedImage.imageFilePath != null;
 
-  TextStyle get textStyle {
-    return const TextStyle(fontFamily: "Unna", overflow: TextOverflow.ellipsis);
+  TextStyle textStyle(BuildContext context) {
+    final fontSize = MediaQuery.of(context).orientation == Orientation.portrait
+        ? fontSizeFraction(context, fractionOfScreenHeight: 0.02)
+        : fontSizeFraction(context, fractionOfScreenHeight: 0.05);
+    return TextStyle(
+      fontFamily: "Courgette",
+      overflow: TextOverflow.ellipsis,
+      fontSize: fontSize,
+    );
   }
 
   final Activity activity;
@@ -691,6 +743,9 @@ abstract class Layout {
   double activityHeight(BuildContext context);
   double headerHeight(BuildContext context);
 
+  double floatingAddButtonWidthAndHeight(BuildContext context);
+  double floatingAddButtonIconSize(BuildContext context);
+
   Decoration headerDecoration(Date date) {
     final bgColor = backgroundColorForHeader(date);
     return tileDecoration(bgColor);
@@ -773,7 +828,20 @@ class LayoutForLandscape extends Layout {
 
   @override
   double activityHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.33;
+    //Linearly scale number of activities vertically:
+    const maxActivitiesVertically = 6.0;
+    const minActivitiesVertically = 2.0;
+    const heightAtMinActivities = 80.0;
+    const heightAtMaxActivities = 2000.0;
+    const slope = (maxActivitiesVertically - minActivitiesVertically) /
+        (heightAtMaxActivities - heightAtMinActivities);
+    const shift = maxActivitiesVertically - (heightAtMaxActivities * slope);
+
+    final availableHeight = getAvailableHeight(context) - headerHeight(context);
+    final numActivitiesVertically = clamp(slope * availableHeight + shift,
+        min: minActivitiesVertically, max: maxActivitiesVertically);
+
+    return availableHeight / numActivitiesVertically;
   }
 
   @override
@@ -789,6 +857,17 @@ class LayoutForLandscape extends Layout {
   @override
   double addButtonIconSize(BuildContext context) {
     return addButtonDisabledHeight(context) * 4.0;
+  }
+
+  @override
+  double floatingAddButtonIconSize(BuildContext context) {
+    return pixelsToFontSizeEstimate(
+        floatingAddButtonWidthAndHeight(context) * 0.5);
+  }
+
+  @override
+  double floatingAddButtonWidthAndHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.15;
   }
 }
 
@@ -826,6 +905,17 @@ class LayoutForPortrait extends Layout {
   @override
   double addButtonIconSize(BuildContext context) {
     return addButtonDisabledHeight(context) * 5.0;
+  }
+
+  @override
+  double floatingAddButtonIconSize(BuildContext context) {
+    return pixelsToFontSizeEstimate(
+        floatingAddButtonWidthAndHeight(context) * 0.5);
+  }
+
+  @override
+  double floatingAddButtonWidthAndHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.07;
   }
 }
 

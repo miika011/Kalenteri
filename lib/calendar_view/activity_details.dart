@@ -35,6 +35,8 @@ class _ActivityDetailsWidgetState extends State<ActivityDetailsWidget> {
         : const NoActivityImage();
 
     return Dialog(
+      clipBehavior: Clip.hardEdge,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Scaffold(
         appBar: appBar(context),
         body: Column(
@@ -57,11 +59,20 @@ class _ActivityDetailsWidgetState extends State<ActivityDetailsWidget> {
               ),
             ),
             Expanded(
-              child: Card(
-                color: const Color.fromARGB(255, 240, 240, 240),
-                child: ActivityDetailsDescriptionWidget(
-                    activity: editableActivity),
-              ),
+              child: Padding(
+                  padding: const EdgeInsets.only(
+                      left: 15, right: 15, bottom: 15, top: 5),
+                  child: Container(
+                    decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 240, 240, 240),
+                        border: Border.all(
+                            color: const Color.fromARGB(255, 236, 236, 236)),
+                        borderRadius: BorderRadius.circular(10)),
+                    //color: Color.fromARGB(245, 255, 255, 255),
+                    child: ActivityDetailsDescriptionWidget(
+                      activity: editableActivity,
+                    ),
+                  )),
             ),
           ],
         ),
@@ -175,13 +186,13 @@ class ActivityDetailsDescriptionWidget extends StatelessWidget {
       : super(key: key);
 
   TextStyle? descriptionTextStyle(BuildContext context) {
-    if (MediaQuery.of(context).orientation == Orientation.portrait) {
-      return TextStyle(
-          fontSize: fontSizeFraction(context, fractionOfScreenHeight: 0.04));
-    } else {
-      return TextStyle(
-          fontSize: fontSizeFraction(context, fractionOfScreenHeight: 0.07));
-    }
+    final fontSize = MediaQuery.of(context).orientation == Orientation.portrait
+        ? fontSizeFraction(context, fractionOfScreenHeight: 0.04)
+        : fontSizeFraction(context, fractionOfScreenHeight: 0.07);
+    return TextStyle(
+      fontSize: fontSize,
+      fontFamily: "Courgette",
+    );
   }
 
   TextStyle dateTextStyle(BuildContext context) {
@@ -196,17 +207,18 @@ class ActivityDetailsDescriptionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return Scrollbar(
+        child: ListView(
       scrollDirection: Axis.vertical,
       children: [
         Padding(
-          padding: const EdgeInsets.all(5),
+          padding: const EdgeInsets.all(10),
           child: Text(
             activity.text,
             style: descriptionTextStyle(context),
           ),
         ),
       ],
-    );
+    ));
   }
 }

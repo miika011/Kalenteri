@@ -83,6 +83,14 @@ flutter:
       fonts:
         - asset: fonts/CabinSketch-Regular.ttf
         - asset: fonts/CabinSketch-Bold.ttf
+
+    - family: AbyssinicaSIL
+      fonts:
+        - asset: fonts/AbyssinicaSIL-Regular.ttf
+        
+    - family: Courgette
+      fonts:
+        - asset: fonts/Courgette-Regular.ttf
           
 
   # An image asset can refer to one or more resolution-specific "variants", see

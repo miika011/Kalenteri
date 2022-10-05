@@ -6,15 +6,18 @@ class AnimatedBoxBorder extends StatefulWidget {
   final Curve curve;
   final Border border1;
   final Border border2;
+  final TickerProvider? _vsync;
 
-  AnimatedBoxBorder(
-      {Key? key,
-      required this.child,
-      Duration? duration,
-      Curve? curve,
-      Border? border1,
-      Border? border2})
-      : border1 = border1 ??
+  AnimatedBoxBorder({
+    Key? key,
+    required this.child,
+    Duration? duration,
+    Curve? curve,
+    Border? border1,
+    Border? border2,
+    TickerProvider? vsync,
+  })  : _vsync = vsync,
+        border1 = border1 ??
             Border.all(color: const Color.fromARGB(255, 163, 247, 8), width: 1),
         border2 = border2 ?? Border.all(color: Colors.green, width: 2.5),
         curve = curve ?? Curves.easeInOut,
@@ -29,14 +32,16 @@ class _AnimatedBoxBorderState extends State<AnimatedBoxBorder>
     with TickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation _animation;
+  late final TickerProvider _vsync;
 
   @override
   void initState() {
     super.initState();
+    _vsync = widget._vsync ?? this;
 
     _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      vsync: _vsync,
+      duration: widget.duration,
     )
       ..addStatusListener((status) {
         if (status == AnimationStatus.dismissed) {

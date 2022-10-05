@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -363,4 +365,11 @@ int hashCodeFromObjects(List<Object?> objects) {
     hashCode = 37 * hashCode + (object != null ? object.hashCode : 0);
   }
   return hashCode;
+}
+
+double getAvailableHeight(BuildContext context) {
+  final mq = MediaQuery.of(context);
+  final availableHeight =
+      max(0.0, mq.size.height - mq.viewInsets.bottom - mq.viewInsets.top);
+  return availableHeight;
 }
