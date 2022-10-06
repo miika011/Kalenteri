@@ -11,6 +11,7 @@ void main() async {
 
   runApp(
     MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: const AppHome(),
       theme: ThemeData(
         appBarTheme: const AppBarTheme(
