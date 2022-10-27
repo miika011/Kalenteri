@@ -34,7 +34,18 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
   ActivityDragStatus? activityDragStatus;
   late final ScrollController _scrollController;
   bool _fadeFloatingAddButton = false;
-  double get _floatingAddButtonOpacity => _fadeFloatingAddButton ? 0.4 : 1.0;
+  double get _floatingAddButtonOpacity {
+    final int daysToSunday =
+        widget.dayInTheWeek.weekDayEnum.daysTo(Weekday.sun);
+    final Date sundayOfTheWeek = Date.fromDateTime(DateTime(
+        widget.dayInTheWeek.year,
+        widget.dayInTheWeek.month,
+        widget.dayInTheWeek.day + daysToSunday));
+    return LogBook().activitiesForDate(sundayOfTheWeek).length >=
+            layout.minActivitiesPerScreen
+        ? 0.8
+        : 1.0;
+  }
 
   bool get isDraggingActivity => activityDragStatus != null;
   void stopDragging() => activityDragStatus = null;
@@ -130,10 +141,19 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
         return Expanded(
           child: Container(
             decoration: layout.headerDecoration(date),
-            child: DayHeaderWidget(
-              date,
-              textStyle: textStyle,
-            ),
+            child: Stack(children: [
+              DayHeaderWidget(
+                date,
+                textStyle: textStyle,
+              ),
+              Container(
+                decoration: date.isToday
+                    ? BoxDecoration(
+                        color: Color.fromARGB(55, 0, 0, 0),
+                        borderRadius: BorderRadius.circular(20))
+                    : null,
+              )
+            ]),
           ),
         );
       }).toList(),
@@ -740,8 +760,9 @@ abstract class Layout {
   double addButtonIconSize(BuildContext context);
   double addButtonEnabledHeight(BuildContext context);
   double addButtonDisabledHeight(BuildContext context);
-  double activityHeight(BuildContext context);
   double headerHeight(BuildContext context);
+  int get minActivitiesPerScreen;
+  int get maxActivitiesPerScreen;
 
   double floatingAddButtonWidthAndHeight(BuildContext context);
   double floatingAddButtonIconSize(BuildContext context);
@@ -751,15 +772,31 @@ abstract class Layout {
     return tileDecoration(bgColor);
   }
 
+  double activityHeight(BuildContext context) {
+    //Linearly scale number of activities vertically:
+
+    const heightAtMinActivities = 80.0;
+    const heightAtMaxActivities = 2000.0;
+    final slope = (maxActivitiesPerScreen - minActivitiesPerScreen) /
+        (heightAtMaxActivities - heightAtMinActivities);
+    final shift = maxActivitiesPerScreen - (heightAtMaxActivities * slope);
+
+    final availableHeight = getAvailableHeight(context) - headerHeight(context);
+    final numActivitiesVertically = clamp(slope * availableHeight + shift,
+        min: minActivitiesPerScreen, max: maxActivitiesPerScreen);
+
+    return availableHeight / numActivitiesVertically;
+  }
+
   TextStyle headerTextStyle(
       {required BuildContext context, required Date date}) {
     final decoration = date.isToday ? TextDecoration.underline : null;
     final normalFontSize =
-        pixelsToFontSizeEstimate(headerHeight(context) * 0.9);
+        pixelsToFontSizeEstimate(headerHeight(context) * 0.75);
     final textStyle = TextStyle(
       fontFamily: "Cabin Sketch",
       decoration: decoration,
-      fontSize: date.isToday ? normalFontSize * 1.2 : normalFontSize,
+      fontSize: date.isToday ? normalFontSize * 1.3 : normalFontSize,
     );
     return textStyle;
   }
@@ -827,22 +864,10 @@ class LayoutForLandscape extends Layout {
   }
 
   @override
-  double activityHeight(BuildContext context) {
-    //Linearly scale number of activities vertically:
-    const maxActivitiesVertically = 6.0;
-    const minActivitiesVertically = 2.0;
-    const heightAtMinActivities = 80.0;
-    const heightAtMaxActivities = 2000.0;
-    const slope = (maxActivitiesVertically - minActivitiesVertically) /
-        (heightAtMaxActivities - heightAtMinActivities);
-    const shift = maxActivitiesVertically - (heightAtMaxActivities * slope);
+  int get minActivitiesPerScreen => 4;
 
-    final availableHeight = getAvailableHeight(context) - headerHeight(context);
-    final numActivitiesVertically = clamp(slope * availableHeight + shift,
-        min: minActivitiesVertically, max: maxActivitiesVertically);
-
-    return availableHeight / numActivitiesVertically;
-  }
+  @override
+  int get maxActivitiesPerScreen => 6;
 
   @override
   double addButtonEnabledHeight(BuildContext context) {
@@ -867,7 +892,7 @@ class LayoutForLandscape extends Layout {
 
   @override
   double floatingAddButtonWidthAndHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.15;
+    return activityHeight(context) * 0.5;
   }
 }
 
@@ -894,7 +919,7 @@ class LayoutForPortrait extends Layout {
 
   @override
   double addButtonEnabledHeight(BuildContext context) {
-    return addButtonDisabledHeight(context) * 10;
+    return addButtonDisabledHeight(context) * 6;
   }
 
   @override
@@ -917,6 +942,13 @@ class LayoutForPortrait extends Layout {
   double floatingAddButtonWidthAndHeight(BuildContext context) {
     return MediaQuery.of(context).size.height * 0.07;
   }
+
+  @override
+  // TODO: implement minActivitiesPerScreen
+  int get minActivitiesPerScreen => 6;
+
+  @override
+  int get maxActivitiesPerScreen => 12;
 }
 
 String heroTagForActivity({required Activity activity, required int index}) {

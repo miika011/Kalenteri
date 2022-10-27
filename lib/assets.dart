@@ -2,14 +2,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'autogen/symbol_assets_generated.dart';
 
 class Assets {
   const Assets();
-  static const SVG = SVGAssets();
+  static const Icons = IconAssets();
 }
 
-class SVGAssets {
-  const SVGAssets();
+class IconAssets {
+  const IconAssets();
 
   SvgPicture done_solid(MaterialColor color) {
     return _loadAsset("assets/icons/svg/done_solid.svg", color);
@@ -24,5 +25,17 @@ class SVGAssets {
       assetPath,
       color: color,
     );
+  }
+}
+
+class SymbolAsset extends StatelessWidget {
+  final String name;
+  late final SvgPicture symbolPicture;
+
+  SymbolAsset({required this.name, required this.symbolPicture});
+
+  @override
+  Widget build(BuildContext context) {
+    return symbolPicture;
   }
 }

@@ -34,6 +34,49 @@ class AcceptButton extends StatefulWidget {
   }
 }
 
+class _AcceptButtonState extends State<AcceptButton> {
+  AcceptButtonStatus? _buttonStatus;
+
+  AcceptButtonStatus get buttonStatus =>
+      _buttonStatus ?? widget.initialButtonStatus;
+
+  set buttonStatus(AcceptButtonStatus newStatus) {
+    if (newStatus != buttonStatus) {
+      setState(() {
+        _buttonStatus = newStatus;
+      });
+    }
+  }
+
+  MaterialColor get color =>
+      buttonStatus != AcceptButtonStatus.disabled ? Colors.green : Colors.grey;
+
+  Widget get icon {
+    switch (buttonStatus) {
+      case AcceptButtonStatus.acceptAndReturn:
+        return Assets.Icons.done_solid(color);
+      case AcceptButtonStatus.disabled:
+      case AcceptButtonStatus.acceptText:
+        return Assets.Icons.done_outlined(color);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      //decoration: decorationForButtons(context: context),
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: IconButton(
+          icon: icon,
+          onPressed: () =>
+              widget.onPressed(context, buttonStatus: buttonStatus),
+        ),
+      ),
+    );
+  }
+}
+
 enum AcceptButtonStatus { disabled, acceptText, acceptAndReturn }
 
 class ActivityImageDisplay extends StatefulWidget {
@@ -42,6 +85,62 @@ class ActivityImageDisplay extends StatefulWidget {
 
   @override
   State<ActivityImageDisplay> createState() => _ActivityImageDisplayState();
+}
+
+class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
+  late HashedImage _hashedImage = widget.oldActivity != null
+      ? widget.oldActivity!.hashedImage
+      : HashedImage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      borderRadius: BorderRadius.circular(15),
+      elevation: 10,
+      child: imageWidget(),
+    );
+  }
+
+  BoxDecoration decoration(BuildContext context) {
+    return BoxDecoration(
+      border: Border.all(color: Colors.black, width: 4.0),
+      borderRadius: BorderRadius.circular(10),
+      boxShadow: const [
+        BoxShadow(
+          color: Color.fromARGB(35, 0, 0, 0),
+          spreadRadius: 5,
+          blurRadius: 5,
+        )
+      ],
+    );
+  }
+
+  Widget imageWidget() {
+    if (_hashedImage.imageFilePath != null) {
+      return Image(image: FileImage(File(_hashedImage.imageFilePath!)));
+    } else {
+      return const NoActivityImage();
+    }
+  }
+
+  Center loadingIndicator() {
+    return const Center(
+      child: CircularProgressIndicator(
+        color: Colors.red,
+        backgroundColor: Colors.blue,
+        strokeWidth: 5,
+      ),
+    );
+  }
+
+  /// Updates the image and returns a future to a new hash id.
+  void setImage(File? imageFile) {
+    if (imageFile == null) return;
+    setState(() {
+      _hashedImage = ImageManager.instance.storeResized(
+          imageFileToStore: imageFile, screenSize: MediaQuery.of(context).size);
+    });
+  }
 }
 
 class ActivityTextBox extends StatefulWidget {
@@ -572,103 +671,4 @@ class TextDialogController extends AddActivityController {
         initialText: oldActivity?.text,
         key: _textBoxKey,
       );
-}
-
-class _AcceptButtonState extends State<AcceptButton> {
-  AcceptButtonStatus? _buttonStatus;
-
-  AcceptButtonStatus get buttonStatus =>
-      _buttonStatus ?? widget.initialButtonStatus;
-
-  set buttonStatus(AcceptButtonStatus newStatus) {
-    if (newStatus != buttonStatus) {
-      setState(() {
-        _buttonStatus = newStatus;
-      });
-    }
-  }
-
-  MaterialColor get color =>
-      buttonStatus != AcceptButtonStatus.disabled ? Colors.green : Colors.grey;
-
-  Widget get icon {
-    switch (buttonStatus) {
-      case AcceptButtonStatus.acceptAndReturn:
-        return Assets.SVG.done_solid(color);
-      case AcceptButtonStatus.disabled:
-      case AcceptButtonStatus.acceptText:
-        return Assets.SVG.done_outlined(color);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      //decoration: decorationForButtons(context: context),
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: IconButton(
-          icon: icon,
-          onPressed: () =>
-              widget.onPressed(context, buttonStatus: buttonStatus),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
-  late HashedImage _hashedImage = widget.oldActivity != null
-      ? widget.oldActivity!.hashedImage
-      : HashedImage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      borderRadius: BorderRadius.circular(15),
-      elevation: 10,
-      child: imageWidget(),
-    );
-  }
-
-  BoxDecoration decoration(BuildContext context) {
-    return BoxDecoration(
-      border: Border.all(color: Colors.black, width: 4.0),
-      borderRadius: BorderRadius.circular(10),
-      boxShadow: const [
-        BoxShadow(
-          color: Color.fromARGB(35, 0, 0, 0),
-          spreadRadius: 5,
-          blurRadius: 5,
-        )
-      ],
-    );
-  }
-
-  Widget imageWidget() {
-    if (_hashedImage.imageFilePath != null) {
-      return Image(image: FileImage(File(_hashedImage.imageFilePath!)));
-    } else {
-      return const NoActivityImage();
-    }
-  }
-
-  Center loadingIndicator() {
-    return const Center(
-      child: CircularProgressIndicator(
-        color: Colors.red,
-        backgroundColor: Colors.blue,
-        strokeWidth: 5,
-      ),
-    );
-  }
-
-  /// Updates the image and returns a future to a new hash id.
-  void setImage(File? imageFile) {
-    if (imageFile == null) return;
-    setState(() {
-      _hashedImage = ImageManager.instance.storeResized(
-          imageFileToStore: imageFile, screenSize: MediaQuery.of(context).size);
-    });
-  }
 }

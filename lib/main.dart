@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:Viikkokalenteri/activities.dart';
 import 'package:Viikkokalenteri/util.dart';
+import 'package:flutter/services.dart';
 import 'calendar_view/calendar_view.dart';
 import 'image_manager.dart';
 
@@ -8,6 +9,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LogBook.load();
   await ImageManager.load();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   runApp(
     MaterialApp(

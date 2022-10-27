@@ -163,7 +163,7 @@ extension FactorBy on Color {
 }
 
 Color backgroundColorForActivity(Date date) {
-  switch (date.weekdayEnum) {
+  switch (date.weekDayEnum) {
     case Weekday.mon:
       return const Color(0xFFAFEEC9);
     case Weekday.tue:
@@ -182,7 +182,7 @@ Color backgroundColorForActivity(Date date) {
 }
 
 Color backgroundColorForHeader(Date date) {
-  switch (date.weekdayEnum) {
+  switch (date.weekDayEnum) {
     case Weekday.mon:
       return const Color(0xFF83E4AB);
     case Weekday.tue:
@@ -236,10 +236,12 @@ class Date {
   }
 
   bool get isToday {
-    return this == Date.fromDateTime(DateTime.now());
+    return this == today;
   }
 
-  Weekday get weekdayEnum {
+  Date get today => Date.fromDateTime(DateTime.now());
+
+  Weekday get weekDayEnum {
     final weekDayIndex =
         toDateTime().weekday - 1; // DateTime weekdays are [1,7]
     return Weekday.values[weekDayIndex];
@@ -256,7 +258,7 @@ class Date {
   }
 
   String get abbreviatedWeekDay {
-    switch (weekdayEnum) {
+    switch (weekDayEnum) {
       case Weekday.mon:
         return "Ma";
       case Weekday.tue:
@@ -289,6 +291,13 @@ class Date {
 }
 
 enum Weekday { mon, tue, wed, thu, fri, sat, sun }
+
+extension weekDayDelta on Weekday {
+  int daysTo(Weekday other) {
+    final delta = other.index - this.index;
+    return delta >= 0 ? delta : (DateTime.daysPerWeek - delta);
+  }
+}
 
 enum Month { jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec }
 

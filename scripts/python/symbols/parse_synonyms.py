@@ -67,11 +67,11 @@ class SynonymHtmlFileParser:
             relatedWords = parser.getRelatedWords(htmlStr)
             return Synonym(word=word, relatedWords=relatedWords,closestWords=closestWords,synonyms=synonyms)
 
-if __name__ == "__main__":
-    print(util.getScriptDirectory())
+ 
+
+def buildSynonymsDict():
     os.chdir(util.getScriptDirectory())
     synonyms = dict()
-    synonym = None
     fuckedUp = []
     filePaths = glob.glob(os.path.sep.join([".", fileDirectory, "*.html"]))
     for filePath in filePaths:
@@ -84,5 +84,6 @@ if __name__ == "__main__":
     if fuckedUp:
         filesFuckedUp = '\n'.join(fuckedUp)
         print(f"Failed to parse files {filesFuckedUp}")
+    return synonyms
         
 
