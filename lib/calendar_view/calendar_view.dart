@@ -33,7 +33,6 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
   bool _isAddingActivities = false;
   ActivityDragStatus? activityDragStatus;
   late final ScrollController _scrollController;
-  bool _fadeFloatingAddButton = false;
   double get _floatingAddButtonOpacity {
     final int daysToSunday =
         widget.dayInTheWeek.weekDayEnum.daysTo(Weekday.sun);
@@ -84,12 +83,7 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
 
     return Scaffold(
       body: SafeArea(
-        child: Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (event) => fadeFloatingAddButton(),
-            onPointerUp: (event) => showFloatingAddButton(),
-            onPointerCancel: (event) => showFloatingAddButton(),
-            child: buildWeekView(context)),
+        child: buildWeekView(context),
       ),
       floatingActionButton: Opacity(
         opacity: _floatingAddButtonOpacity,
@@ -109,11 +103,6 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
       ),
     );
   }
-
-  void showFloatingAddButton() =>
-      setState(() => _fadeFloatingAddButton = false);
-
-  void fadeFloatingAddButton() => setState(() => _fadeFloatingAddButton = true);
 
   Column buildWeekView(BuildContext context) {
     return Column(
@@ -347,6 +336,7 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
           ),
         )
         .then((value) => setState(
+              //Just update state to rebuild view
               () {},
             ));
   }
@@ -764,7 +754,6 @@ abstract class Layout {
   int get minActivitiesPerScreen;
   int get maxActivitiesPerScreen;
 
-  double floatingAddButtonWidthAndHeight(BuildContext context);
   double floatingAddButtonIconSize(BuildContext context);
 
   Decoration headerDecoration(Date date) {
@@ -786,6 +775,11 @@ abstract class Layout {
         min: minActivitiesPerScreen, max: maxActivitiesPerScreen);
 
     return availableHeight / numActivitiesVertically;
+  }
+
+  double floatingAddButtonWidthAndHeight(BuildContext context) {
+    final ret = activityHeight(context) * 0.5;
+    return ret;
   }
 
   TextStyle headerTextStyle(
@@ -889,11 +883,6 @@ class LayoutForLandscape extends Layout {
     return pixelsToFontSizeEstimate(
         floatingAddButtonWidthAndHeight(context) * 0.5);
   }
-
-  @override
-  double floatingAddButtonWidthAndHeight(BuildContext context) {
-    return activityHeight(context) * 0.5;
-  }
 }
 
 class LayoutForPortrait extends Layout {
@@ -939,12 +928,6 @@ class LayoutForPortrait extends Layout {
   }
 
   @override
-  double floatingAddButtonWidthAndHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.07;
-  }
-
-  @override
-  // TODO: implement minActivitiesPerScreen
   int get minActivitiesPerScreen => 6;
 
   @override

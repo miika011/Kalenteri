@@ -43,7 +43,9 @@ class _AppHomeState extends State<AppHome> {
             const Color.fromARGB(150, 0, 0, 0),
           ),
           thumbVisibility: MaterialStateProperty.all(true),
-          thickness: MaterialStateProperty.all(15),
+          thickness: MediaQuery.of(context).orientation == Orientation.landscape
+              ? MaterialStateProperty.all(15)
+              : MaterialStateProperty.all(5),
         ),
       );
 

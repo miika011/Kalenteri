@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:Viikkokalenteri/add_activity/symbols_view/symbols_view.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:Viikkokalenteri/image_manager.dart';
@@ -54,10 +55,10 @@ class _AcceptButtonState extends State<AcceptButton> {
   Widget get icon {
     switch (buttonStatus) {
       case AcceptButtonStatus.acceptAndReturn:
-        return Assets.Icons.done_solid(color);
+        return Assets.instance.icons.done_solid(color);
       case AcceptButtonStatus.disabled:
       case AcceptButtonStatus.acceptText:
-        return Assets.Icons.done_outlined(color);
+        return Assets.instance.icons.done_outlined(color);
     }
   }
 
@@ -272,11 +273,12 @@ class _ActivityTextBoxState extends State<ActivityTextBox> {
 
 class AddActivityController {
   Activity? oldActivity;
-  late final GalleryButton galleryButton =
-      GalleryButton(onPressed: onPressedGallery);
+  late final galleryButton = GalleryButton(onPressed: onPressedGallery);
 
-  late final CameraButton cameraButton =
+  late final cameraButton =
       CameraButton(key: _cameraButtonKey, onPressed: onPressedCamera);
+
+  late final symbolsButton = SymbolsButton();
 
   late final AcceptButton acceptButton = AcceptButton(
       key: _acceptButtonKey,
@@ -504,49 +506,6 @@ class AddActivityController {
   }
 }
 
-class CameraButton extends StatefulWidget {
-  final void Function(BuildContext context) onPressed;
-
-  const CameraButton({Key? key, required this.onPressed}) : super(key: key);
-
-  @override
-  State<StatefulWidget> createState() {
-    return _CameraButtonState();
-  }
-}
-
-class _CameraButtonState extends State<CameraButton> {
-  bool _isEnabled = true;
-
-  _CameraButtonState() {
-    Permission.camera.isPermanentlyDenied
-        .then((isDenied) => _isEnabled = !isDenied);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      //decoration: _isEnabled ? decorationForButtons(context: context) : null,
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: IconButton(
-          //color: _isEnabled ? null : Colors.grey,
-          icon: const Icon(Icons.photo_camera),
-          onPressed: _isEnabled ? () => widget.onPressed(context) : null,
-        ),
-      ),
-    );
-  }
-
-  void setEnabled(bool enabled) {
-    if (enabled != _isEnabled) {
-      setState(() {
-        _isEnabled = enabled;
-      });
-    }
-  }
-}
-
 class CancelButton extends StatelessWidget {
   final void Function(BuildContext context) onPressed;
 
@@ -601,6 +560,53 @@ class DateWidget extends StatelessWidget {
   }
 }
 
+Widget buildButton({VoidCallback? onPressed, required Widget icon}) {
+  return Card(
+    child: FittedBox(
+      fit: BoxFit.cover,
+      child: IconButton(
+        icon: icon,
+        onPressed: onPressed,
+      ),
+    ),
+  );
+}
+
+class CameraButton extends StatefulWidget {
+  final void Function(BuildContext context) onPressed;
+
+  const CameraButton({Key? key, required this.onPressed}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() {
+    return _CameraButtonState();
+  }
+}
+
+class _CameraButtonState extends State<CameraButton> {
+  bool _isEnabled = true;
+
+  _CameraButtonState() {
+    Permission.camera.isPermanentlyDenied
+        .then((isDenied) => _isEnabled = !isDenied);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return buildButton(
+        onPressed: _isEnabled ? () => widget.onPressed(context) : null,
+        icon: const Icon(Icons.photo_camera));
+  }
+
+  void setEnabled(bool enabled) {
+    if (enabled != _isEnabled) {
+      setState(() {
+        _isEnabled = enabled;
+      });
+    }
+  }
+}
+
 class GalleryButton extends StatelessWidget {
   final void Function(BuildContext context) onPressed;
 
@@ -608,14 +614,28 @@ class GalleryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      //decoration: decorationForButtons(context: context),
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: IconButton(
-          icon: const Icon(Icons.photo_library),
-          onPressed: () => onPressed(context),
-        ),
+    return buildButton(
+      onPressed: () => onPressed(context),
+      icon: const Icon(Icons.photo_library),
+    );
+  }
+}
+
+class SymbolsButton extends StatelessWidget {
+  const SymbolsButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return buildButton(
+      onPressed: () => onPressed(context),
+      icon: Assets.instance.icons.addSymbol(),
+    );
+  }
+
+  void onPressed(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SymbolsView(),
       ),
     );
   }

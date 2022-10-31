@@ -7,6 +7,7 @@ import re
 import os
 import glob
 import util
+from my_csv import *
 
 fileDirectory = "synonym_html"
 
@@ -87,3 +88,44 @@ def buildSynonymsDict():
     return synonyms
         
 
+
+if __name__ == "__main__":
+    synonymsDict = buildSynonymsDict()
+    
+    scriptDirectory = util.getScriptDirectory()
+    newCategoriesPath = os.path.join(scriptDirectory, 'kategoriat.csv')
+    newCategoriesCsv = Csv(newCategoriesPath)
+
+    translatedSymbolsPath = os.path.join(scriptDirectory, "FinnishSymbolNames.csv")
+    translatedSymbolsCsv = Csv(translatedSymbolsPath)
+
+    synonymsExtendedCsv = Csv()
+
+    newHeaders = ["fileName", "synonyms", "closestWords", "relatedWords", "categories"]
+    for header in newHeaders:
+        synonymsExtendedCsv.addHeader(header)
+    
+    SYMBOL_EN_INDEX = 1
+    SYMBOL_FI_INDEX = 2
+    SYMBOL_CATEGORY_INDEX = 3
+    for translatedSymbolRow in translatedSymbolsCsv.asRows():
+        symbolFileName = translatedSymbolRow[SYMBOL_EN_INDEX] + ".svg"
+        symbolTranslation = translatedSymbolRow[SYMBOL_FI_INDEX].lower()
+        try:
+            synonym = synonymsDict[symbolTranslation]
+        except:
+            synonym = Synonym(symbolTranslation)
+        originalCategory = translatedSymbolRow[SYMBOL_CATEGORY_INDEX]
+        try:
+            extendedCategoryRowNumber = newCategoriesCsv.dict["original"].index(originalCategory)
+            extendedCategories = newCategoriesCsv.dict["split"][extendedCategoryRowNumber]
+        except:
+            extendedCategories = originalCategory
+        synonyms = "&".join([symbolTranslation] + synonym.synonyms)
+        closestWords = "&".join(synonym.closestWords)
+        relatedWords = "&".join(synonym.relatedWords)
+        
+        synonymsExtendedCsv.addRow([symbolFileName, synonyms, closestWords, relatedWords, extendedCategories])
+    outFile = os.path.join(scriptDirectory,"synonyms.csv")
+    synonymsExtendedCsv.writeToFile(outFile)
+        

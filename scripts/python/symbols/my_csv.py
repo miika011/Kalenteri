@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import codecs
-from email import header
 import re
 import os
 
@@ -18,6 +17,19 @@ class Csv:
         if inputFilePath != None and isReadImmediately:
             self.loadFromFile(self.inputFilePath)
 
+    def addHeader(self, header):
+        column = list()
+        self.headers.append(header)
+        self.data.append(column)
+        self.dict[header] = column
+
+    def addRow(self, row):
+        assert(len(row) == len(self.headers))
+        rowIter = iter(row)
+
+        for column in self.data:
+            column.append(next(rowIter))
+
     def trimmedList(self, l):
         ret = list(l)
         if self.isStripped:
@@ -25,8 +37,10 @@ class Csv:
         return self.isLowered and loweredList(ret) or ret
 
     def loadFromFile(self, filePath = None):
-        filePath = filePath or self.inputFilePath
-        with codecs.open(filePath, mode="r", encoding="utf-8-sig") as f:
+        if filePath:
+            self.inputFilePath = filePath
+
+        with codecs.open(self.inputFilePath, mode="r", encoding="utf-8-sig") as f:
             self.headers = self.trimmedList(f.readline().split(self.separator))
 
             for columnNumber in range(len(self.headers)):

@@ -128,6 +128,10 @@ class _AddActivityInPortrait extends StatelessWidget {
                     height: sizeForCameraAndGalleryButtons(context).height,
                     child: logicController.cameraButton),
               ),
+              SizedBox(
+                  width: sizeForCameraAndGalleryButtons(context).width,
+                  height: sizeForCameraAndGalleryButtons(context).height,
+                  child: logicController.symbolsButton),
               Padding(
                 padding: paddingForGalleryButton(context),
                 child: SizedBox(
