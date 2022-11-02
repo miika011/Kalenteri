@@ -8,7 +8,6 @@ import 'image_manager.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LogBook.load();
-  await ImageManager.load();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   runApp(

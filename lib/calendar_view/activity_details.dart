@@ -28,10 +28,9 @@ class _ActivityDetailsWidgetState extends State<ActivityDetailsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    Widget image = editableActivity.hashedImage.imageFilePath != null
+    Widget image = editableActivity.hashedImage?.imageProvider != null
         ? ActivityDetailsImageWidget(
-            imageProvider:
-                FileImage(File(editableActivity.hashedImage.imageFilePath!)))
+            imageProvider: editableActivity.hashedImage!.imageProvider!)
         : const NoActivityImage();
 
     return Dialog(

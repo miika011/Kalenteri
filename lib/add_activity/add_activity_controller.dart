@@ -89,9 +89,7 @@ class ActivityImageDisplay extends StatefulWidget {
 }
 
 class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
-  late HashedImage _hashedImage = widget.oldActivity != null
-      ? widget.oldActivity!.hashedImage
-      : HashedImage();
+  late HashedImage? _hashedImage = widget.oldActivity?.hashedImage;
 
   @override
   Widget build(BuildContext context) {
@@ -117,8 +115,8 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
   }
 
   Widget imageWidget() {
-    if (_hashedImage.imageFilePath != null) {
-      return Image(image: FileImage(File(_hashedImage.imageFilePath!)));
+    if (_hashedImage?.imageProvider != null) {
+      return Image(image: _hashedImage!.imageProvider!);
     } else {
       return const NoActivityImage();
     }
@@ -135,11 +133,15 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
   }
 
   /// Updates the image and returns a future to a new hash id.
-  void setImage(File? imageFile) {
-    if (imageFile == null) return;
+  void setImage({required String imagePath, required ImageType imageType}) {
     setState(() {
-      _hashedImage = ImageManager.instance.storeResized(
-          imageFileToStore: imageFile, screenSize: MediaQuery.of(context).size);
+      if (imageType == ImageType.storageImage) {
+        _hashedImage = ImageManager.instance.storeResized(
+            imageFileToStore: File(imagePath),
+            screenSize: MediaQuery.of(context).size);
+      } else if (imageType == ImageType.assetImage) {
+        _hashedImage = ImageManager.instance.storeAsset(imagePath);
+      }
     });
   }
 }
@@ -278,7 +280,7 @@ class AddActivityController {
   late final cameraButton =
       CameraButton(key: _cameraButtonKey, onPressed: onPressedCamera);
 
-  late final symbolsButton = SymbolsButton();
+  late final symbolsButton = SymbolsButton(onPressed: onPressedSymbol);
 
   late final AcceptButton acceptButton = AcceptButton(
       key: _acceptButtonKey,
@@ -308,7 +310,7 @@ class AddActivityController {
     return _imageDisplayKey.currentState?._hashedImage;
   }
 
-  bool get hasImage => hashedImage?.imageFilePath != null;
+  bool get hasImage => hashedImage?.imageProvider != null;
 
   bool get hasText => textValue.trim().isNotEmpty;
 
@@ -372,12 +374,25 @@ class AddActivityController {
     askForCameraPermission(context).then(
       (permissionStatus) {
         if (permissionStatus == PermissionStatus.granted) {
-          _selectImage(ImageSource.camera);
+          _selectStorageImage(ImageSource.camera);
         } else {
           _cameraButtonKey.currentState!.setEnabled(false);
         }
       },
     );
+  }
+
+  void onPressedSymbol(BuildContext context) {
+    Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: ((context) {
+          return SymbolsView();
+        }),
+      ),
+    ).then((assetPath) {
+      if (assetPath == null) return;
+      setImage(imagePath: assetPath, imageType: ImageType.assetImage);
+    });
   }
 
   Future<PermissionStatus> askForCameraPermission(BuildContext context) async {
@@ -440,7 +455,7 @@ class AddActivityController {
   }
 
   void onPressedGallery(BuildContext context) async {
-    _selectImage(ImageSource.gallery);
+    _selectStorageImage(ImageSource.gallery);
   }
 
   void onTextChanged(BuildContext context, {String? newValue}) {
@@ -473,8 +488,9 @@ class AddActivityController {
     buttonState?.buttonStatus = buttonStatus;
   }
 
-  void setImage(XFile file) {
-    _imageDisplayKey.currentState!.setImage(File(file.path));
+  void setImage({required String imagePath, required ImageType imageType}) {
+    _imageDisplayKey.currentState!
+        .setImage(imagePath: imagePath, imageType: imageType);
     updateAcceptButtonStatus();
   }
 
@@ -500,9 +516,10 @@ class AddActivityController {
     }
   }
 
-  void _selectImage(ImageSource source) async {
+  void _selectStorageImage(ImageSource source) async {
     final XFile? xFile = await _imagePicker.pickImage(source: source);
-    if (xFile != null) setImage(xFile);
+    if (xFile != null)
+      setImage(imagePath: xFile.path, imageType: ImageType.storageImage);
   }
 }
 
@@ -622,21 +639,15 @@ class GalleryButton extends StatelessWidget {
 }
 
 class SymbolsButton extends StatelessWidget {
-  const SymbolsButton({Key? key}) : super(key: key);
+  final void Function(BuildContext context) onPressed;
+
+  const SymbolsButton({Key? key, required this.onPressed}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return buildButton(
       onPressed: () => onPressed(context),
       icon: Assets.instance.icons.addSymbol(),
-    );
-  }
-
-  void onPressed(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => SymbolsView(),
-      ),
     );
   }
 }

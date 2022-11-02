@@ -7,15 +7,15 @@ import 'dart:convert';
 class Activity {
   Date _date;
   String _text;
-  HashedImage _hashedImage;
+  HashedImage? _hashedImage;
 
   Date get date => _date;
   String get text => _text;
-  HashedImage get hashedImage => _hashedImage;
+  HashedImage? get hashedImage => _hashedImage;
 
   Activity({required Date date, String? text, HashedImage? hashedImage})
       : _text = text ?? "",
-        _hashedImage = hashedImage ?? HashedImage(),
+        _hashedImage = hashedImage,
         _date = date;
 
   @override
@@ -33,14 +33,15 @@ class Activity {
     final date = json["date"];
     final label = json["label"];
     final imageHash = json["imageHash"];
-    return Activity(
+    final ret = Activity(
         date: Date.fromJson(date),
         text: label,
-        hashedImage: HashedImage(imageHash: imageHash));
+        hashedImage: ImageManager.instance.getImage(imageHash));
+    return ret;
   }
 
   Map<String, dynamic> toJson() =>
-      {"date": date, "label": text, "imageHash": _hashedImage.imageHash};
+      {"date": date, "label": text, "imageHash": _hashedImage?.imageHash};
 }
 
 /// Logbook for logging activities
@@ -101,8 +102,8 @@ class LogBook {
       for (final activityJson in entry.value) {
         final activity = Activity.fromJson(activityJson);
         if (activity.text.isNotEmpty ||
-            activity.hashedImage.imageHash != null) {
-          activitiesForDay.add(Activity.fromJson(activityJson));
+            activity.hashedImage?.imageHash != null) {
+          activitiesForDay.add(activity);
         }
       }
       activities[date] = activitiesForDay;
@@ -119,6 +120,7 @@ class LogBook {
   }
 
   static Future<void> load() async {
+    await ImageManager.load();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString("logBook");
     if (jsonString != null) {

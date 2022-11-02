@@ -4,20 +4,32 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg_provider/flutter_svg_provider.dart';
 import 'package:image/image.dart' as lib_image;
 import 'package:Viikkokalenteri/activities.dart';
 import 'package:Viikkokalenteri/util.dart';
 import 'package:path_provider/path_provider.dart' as lib_path;
 import 'package:crypto/crypto.dart' show md5;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 /// Handles stored images.
 /// Images are accessed via String keys.
 class ImageManager {
   static ImageManager _instance = ImageManager._internal();
-  static ImageManager get instance => _instance;
+  static ImageManager get instance {
+    return _instance;
+  }
 
-  Map<String, String?> _images = {};
+  Map<String, SavedImage?> _images = {};
+
+  HashedImage? getImage(String hash) {
+    final savedImage = _images[hash];
+    if (savedImage == null) {
+      return null;
+    }
+    return HashedImage(type: savedImage.type, imageHash: hash);
+  }
 
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -25,6 +37,7 @@ class ImageManager {
     if (jsonString != null) {
       _instance = ImageManager.fromJson(jsonDecode(jsonString));
     }
+    print(jsonString);
   }
 
   static void save() async {
@@ -34,18 +47,24 @@ class ImageManager {
   }
 
   Map<String, dynamic> toJson() {
-    return {"_images": _images};
+    return {"_images": jsonEncode(_images)};
   }
 
   factory ImageManager.fromJson(Map<String, dynamic> json) {
-    return ImageManager._internal(
-        images: Map<String, String?>.from(json["_images"]));
+    final savedImages = jsonDecode(json["_images"]);
+    final images = Map<String, SavedImage?>.fromIterable(
+      savedImages.entries,
+      key: (element) => element.key,
+      value: (element) => SavedImage.fromJson(element.value),
+    );
+    final ret = ImageManager._internal(images: images);
+    return ret;
   }
 
-  ImageManager._internal({Map<String, String?>? images})
+  ImageManager._internal({Map<String, SavedImage?>? images})
       : _images = images ?? {};
 
-  String? getImageFilePath(String imageHash) => _images[imageHash];
+  String? getImageFilePath(String imageHash) => _images[imageHash]?.path;
 
   File? getImageFile(String imageHash) {
     final path = getImageFilePath(imageHash);
@@ -53,8 +72,11 @@ class ImageManager {
     return File(path);
   }
 
-  void _addImage({required String hashId, required String imagePath}) {
-    _images[hashId] = imagePath;
+  void _addImage(
+      {required String hashId,
+      required String imagePath,
+      required ImageType type}) {
+    _images[hashId] = SavedImage(type: type, path: imagePath);
     save();
   }
 
@@ -65,10 +87,19 @@ class ImageManager {
   /// ends.
   HashedImage storeResized(
       {required File imageFileToStore, required Size screenSize}) {
-    final hashedImage = HashedImage(temporaryFilePath: imageFileToStore.path);
+    final hashedImage = HashedImage(
+        temporaryFilePath: imageFileToStore.path, type: ImageType.storageImage);
     _storeResized(imageFileToStore, screenSize)
         .then((hash) => hashedImage.setImageHash(hash));
     return hashedImage;
+  }
+
+  ///Again, disgusting hack but this requires less rewriting
+  HashedImage storeAsset(String assetPath) {
+    final image = HashedImage(imageHash: assetPath, type: ImageType.assetImage);
+    _addImage(
+        hashId: assetPath, imagePath: assetPath, type: ImageType.assetImage);
+    return image;
   }
 
   Future<String> _storeResized(File imageFileToStore, Size screenSize) async {
@@ -85,9 +116,9 @@ class ImageManager {
     );
 
     _addImage(
-      hashId: storedImage.imageHash!,
-      imagePath: storedImage.imageFilePath!,
-    );
+        hashId: storedImage.imageHash!,
+        imagePath: storedImage._temporaryImageFilePath!,
+        type: ImageType.storageImage);
     return storedImage._imageHash!;
   }
 
@@ -100,9 +131,12 @@ class ImageManager {
 
     final imageRawData = imageFile.readAsBytesSync();
     final imageHash = md5.convert(imageRawData).toString();
-    final String? oldPath = oldHashes[imageHash];
+    final String? oldPath = oldHashes[imageHash]?.path;
     if (oldPath != null && File(oldPath).existsSync()) {
-      return HashedImage(imageHash: imageHash, temporaryFilePath: oldPath);
+      return HashedImage(
+          imageHash: imageHash,
+          temporaryFilePath: oldPath,
+          type: ImageType.storageImage);
     }
 
     final originalImage = lib_image.decodeImage(imageRawData)!;
@@ -114,7 +148,7 @@ class ImageManager {
             : screenSize.height)
         .toInt();
 
-    width = min(width, originalImage.width); //Don't upscale
+    width = min(width, originalImage.width); //Don't upscale small images
 
     final resizedImage = lib_image.copyResize(
       originalImage,
@@ -127,7 +161,9 @@ class ImageManager {
     final resizedImageFile =
         await _saveToStorage(resizedImageRawData, outputFile);
     return HashedImage(
-        imageHash: imageHash, temporaryFilePath: resizedImageFile.path);
+        imageHash: imageHash,
+        temporaryFilePath: resizedImageFile.path,
+        type: ImageType.storageImage);
   }
 
   Future<File> _saveToStorage(List<int> imageRawData, File outputFile) async {
@@ -136,6 +172,25 @@ class ImageManager {
   }
 
   String _fileNameFor(String imageHash) => "$imageHash${_ImageEncoder.suffix}";
+}
+
+class SavedImage {
+  final ImageType type;
+  final String path;
+
+  SavedImage({required this.type, required this.path});
+
+  Map<String, dynamic> toJson() {
+    final json = {"type": jsonEncode(type.index), "path": path};
+    final fromJson = SavedImage.fromJson(json);
+    return json;
+  }
+
+  factory SavedImage.fromJson(Map<String, dynamic> json) {
+    final ret = SavedImage(
+        type: ImageType.values[jsonDecode(json["type"])], path: json["path"]);
+    return ret;
+  }
 }
 
 class _ImageEncoder {
@@ -148,6 +203,7 @@ class _ImageEncoder {
 class HashedImage {
   String? _imageHash;
   String? _temporaryImageFilePath;
+  ImageType? _imageType;
 
   String? get imageHash => _imageHash;
 
@@ -155,9 +211,30 @@ class HashedImage {
   /// 1)  An already calculated (by [ImageManager])
   ///   hash ID or
   /// 2)  A temporary file path indicating that hashing is still in progress.
-  HashedImage({String? imageHash, String? temporaryFilePath})
+  HashedImage(
+      {String? imageHash, String? temporaryFilePath, required ImageType type})
       : _imageHash = imageHash,
-        _temporaryImageFilePath = temporaryFilePath;
+        _temporaryImageFilePath = temporaryFilePath,
+        _imageType = type;
+
+  Map<String, dynamic> toJson() {
+    return {
+      "imageHash": _imageHash,
+      "temporaryPath": _temporaryImageFilePath,
+      "imageType": jsonEncode(_imageType)
+    };
+  }
+
+  factory HashedImage.fromJson(Map<String, dynamic> json) {
+    final hash = json["imageHash"];
+    final tempPath = json["temporaryPath"];
+    final type = ImageType.values[jsonDecode(json["imageType"])];
+    final ret = HashedImage(
+        imageHash: json["imageHash"],
+        temporaryFilePath: json["temporaryPath"],
+        type: jsonDecode(json["imageType"]));
+    return ret;
+  }
 
   @override
   operator ==(Object other) =>
@@ -179,12 +256,28 @@ class HashedImage {
     _imageHash = null;
   }
 
-  String? get imageFilePath {
+  String? get _imagePath {
     if (_imageHash == null) return _temporaryImageFilePath;
-    return ImageManager.instance.getImageFilePath(_imageHash!) ??
-        _temporaryImageFilePath;
+    return ImageManager.instance.getImageFilePath(_imageHash!);
+  }
+
+  ///Disgusting hack with image type
+  ///but this required less rewriting for now.
+  ImageProvider? get imageProvider {
+    final path = _imagePath;
+    if (path == null) {
+      return null;
+    }
+    if (_imageType == ImageType.storageImage) {
+      return FileImage(File(path));
+    } else if (_imageType == ImageType.assetImage) {
+      return Svg(path);
+    }
+    return null;
   }
 }
+
+enum ImageType { storageImage, assetImage }
 
 class _ResizeIsolateArguments {
   _ResizeIsolateArguments(
@@ -195,5 +288,5 @@ class _ResizeIsolateArguments {
   File imageFile;
   Directory outputDirectory;
   Size screenSize;
-  Map<String, String?> oldHashes;
+  Map<String, SavedImage?> oldHashes;
 }

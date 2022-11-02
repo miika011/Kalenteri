@@ -35,6 +35,7 @@ dependencies:
   gallery_saver:
   shared_preferences:
   flutter_svg:
+  flutter_svg_provider:
   crypto:
   permission_handler:
   

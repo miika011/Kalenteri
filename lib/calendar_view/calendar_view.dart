@@ -552,9 +552,9 @@ class ActivityWidget extends StatelessWidget {
   bool get hasText => text != "";
 
   Widget get _imageWidget {
-    if (activity.hashedImage.imageFilePath == null) return Container();
+    if (activity.hashedImage?.imageProvider == null) return Container();
     return Image(
-      image: FileImage(File(activity.hashedImage.imageFilePath!)),
+      image: activity.hashedImage!.imageProvider!,
     );
   }
 
@@ -564,7 +564,7 @@ class ActivityWidget extends StatelessWidget {
         overflow: TextOverflow.fade,
       );
 
-  bool get hasImage => activity.hashedImage.imageFilePath != null;
+  bool get hasImage => activity.hashedImage?.imageProvider != null;
 
   TextStyle textStyle(BuildContext context) {
     final fontSize = MediaQuery.of(context).orientation == Orientation.portrait
