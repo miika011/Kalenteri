@@ -181,7 +181,6 @@ class Vocabulary {
           assetPath: filePath,
           words: categories,
           wordsToAsset: categoriesToAsset);
-      print(line);
     }
     instance._synonyms = _Dictionary(
         wordsToAssetPaths: synonymsToAsset, type: _DictionaryType.synonym);

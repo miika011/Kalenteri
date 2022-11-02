@@ -37,7 +37,6 @@ class ImageManager {
     if (jsonString != null) {
       _instance = ImageManager.fromJson(jsonDecode(jsonString));
     }
-    print(jsonString);
   }
 
   static void save() async {

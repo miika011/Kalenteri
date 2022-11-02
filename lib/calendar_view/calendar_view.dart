@@ -635,7 +635,6 @@ class _DraggedActivityState extends State<DraggedActivity>
       if (_isScrolling) {
         final delta =
             _scrollDirection == _Direction.down ? scrollDeltaY : -scrollDeltaY;
-        //print("Scrolling $_scrollDirection");
         setState(() {
           widget.scrollController.jumpTo(clamp(
               widget.scrollController.offset + delta,
