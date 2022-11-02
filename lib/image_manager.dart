@@ -58,6 +58,7 @@ class ImageManager {
       value: (element) => SavedImage.fromJson(element.value),
     );
     final ret = ImageManager._internal(images: images);
+
     return ret;
   }
 

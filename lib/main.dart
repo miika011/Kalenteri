@@ -1,3 +1,4 @@
+import 'package:Viikkokalenteri/add_activity/symbols_view/symbols_view.dart';
 import 'package:flutter/material.dart';
 import 'package:Viikkokalenteri/activities.dart';
 import 'package:Viikkokalenteri/util.dart';
@@ -8,6 +9,7 @@ import 'image_manager.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LogBook.load();
+  await Vocabulary.load();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   runApp(

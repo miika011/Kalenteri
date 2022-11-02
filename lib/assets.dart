@@ -31,6 +31,13 @@ class Assets {
     _isInitialized = true;
   }
 
+  String? getSymbolPath(String symbolFileName) {
+    final path = symbolsPath + symbolFileName;
+    if (symbolFiles.contains(path)) {
+      return path;
+    }
+  }
+
   Assets._internal() {}
   final icons = IconAssets();
 }
