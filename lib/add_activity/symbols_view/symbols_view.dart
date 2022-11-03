@@ -21,6 +21,7 @@ class _SymbolsViewState extends State<SymbolsView> {
 
   @override
   Widget build(BuildContext context) {
+    final results = Vocabulary.instance.search("sotilas");
     return Scaffold(
       body: Column(
         children: [
@@ -155,10 +156,10 @@ class Vocabulary {
   static Future<void> load() async {
     final csv = await rootBundle.loadString(csvPath);
     final lines = csv.split(eol).sublist(1); // Ignore first line(header)
-    final Map<String, String?> synonymsToAsset = {};
-    final Map<String, String?> closestWordsToAssets = {};
-    final Map<String, String?> relatedWordsToAsset = {};
-    final Map<String, String?> categoriesToAsset = {};
+    final Map<String, List<String>?> synonymsToAssets = {};
+    final Map<String, List<String>?> closestWordsToAssets = {};
+    final Map<String, List<String>?> relatedWordsToAsset = {};
+    final Map<String, List<String>?> categoriesToAssets = {};
     for (final line in lines) {
       if (line.isEmpty) continue;
       final entries = line.split(csvSeparator);
@@ -168,22 +169,24 @@ class Vocabulary {
       final relatedWords = entries[relatedWordsIndex].split(csvSubSeparator);
       final categories = entries[categoriesIndex].split(csvSubSeparator);
       instance._addWords(
-          assetPath: filePath, words: synonyms, wordsToAsset: synonymsToAsset);
+          assetPath: filePath,
+          words: synonyms,
+          wordsToAssets: synonymsToAssets);
       instance._addWords(
           assetPath: filePath,
           words: closestWords,
-          wordsToAsset: closestWordsToAssets);
+          wordsToAssets: closestWordsToAssets);
       instance._addWords(
           assetPath: filePath,
           words: relatedWords,
-          wordsToAsset: relatedWordsToAsset);
+          wordsToAssets: relatedWordsToAsset);
       instance._addWords(
           assetPath: filePath,
           words: categories,
-          wordsToAsset: categoriesToAsset);
+          wordsToAssets: categoriesToAssets);
     }
     instance._synonyms = _Dictionary(
-        wordsToAssetPaths: synonymsToAsset, type: _DictionaryType.synonym);
+        wordsToAssetPaths: synonymsToAssets, type: _DictionaryType.synonym);
     instance._closestWords = _Dictionary(
         wordsToAssetPaths: closestWordsToAssets,
         type: _DictionaryType.closestWord);
@@ -191,52 +194,60 @@ class Vocabulary {
         wordsToAssetPaths: relatedWordsToAsset,
         type: _DictionaryType.relatedWord);
     instance._categories = _Dictionary(
-        wordsToAssetPaths: categoriesToAsset, type: _DictionaryType.category);
+        wordsToAssetPaths: categoriesToAssets, type: _DictionaryType.category);
   }
 
   void _addWords(
-      {required Map<String, String?> wordsToAsset,
+      {required Map<String, List<String>?> wordsToAssets,
       required List<String> words,
       required String assetPath}) {
-    for (final word in words) {
-      wordsToAsset[word.trim()] = assetPath;
+    for (String word in words) {
+      word = word.trim();
+      if (wordsToAssets[word] == null) {
+        wordsToAssets[word] = [];
+      }
+      wordsToAssets[word.trim()]?.add(assetPath);
     }
   }
 
   ///Returns path to symbol asset if there is a match
   Set<String> search(String searchTerm) {
+    final ret = Set<String>();
     final searchResults = _synonyms.search(searchTerm)
       ..addAll(_closestWords.search(searchTerm))
       ..addAll(_relatedWords.search(searchTerm))
       ..addAll(_categories.search(searchTerm));
-    return searchResults.map((result) => result.pathToAsset).toSet();
+    searchResults.forEach((searchResult) {
+      ret.addAll(searchResult.pathsToAssets);
+    });
+    return ret;
   }
 }
 
 class _Dictionary {
-  Map<String, String?> wordsToAssetPaths;
+  Map<String, List<String>?> wordsToAssetPaths;
   _DictionaryType type;
   _Dictionary({required this.wordsToAssetPaths, required this.type});
 
   List<_SearchResult> search(String searchTerm) {
     List<_SearchResult> results = [];
     for (final word in wordsToAssetPaths.keys) {
-      final pathToAsset = wordsToAssetPaths[word]!;
+      final pathToAssets = wordsToAssetPaths[word]!;
       if (word.equalsCaseInsensitive(searchTerm)) {
         results.add(_SearchResult(
-            pathToAsset: pathToAsset,
+            pathsToAssets: pathToAssets,
             dictionaryType: type,
             matchType: _SearchMatchType.exact));
       }
       if (word.startsWithCaseInsensitive(searchTerm)) {
         results.add(_SearchResult(
-            pathToAsset: pathToAsset,
+            pathsToAssets: pathToAssets,
             dictionaryType: type,
             matchType: _SearchMatchType.begin));
       }
       if (word.containsCaseInsensitive(searchTerm)) {
         results.add(_SearchResult(
-            pathToAsset: pathToAsset,
+            pathsToAssets: pathToAssets,
             dictionaryType: type,
             matchType: _SearchMatchType.partial));
       }
@@ -255,12 +266,12 @@ extension _CaseInsensitiveComparison on String {
 }
 
 class _SearchResult {
-  String pathToAsset;
+  List<String> pathsToAssets;
   _DictionaryType dictionaryType;
   _SearchMatchType matchType;
 
   _SearchResult(
-      {required this.pathToAsset,
+      {required this.pathsToAssets,
       required this.dictionaryType,
       required this.matchType});
 }
