@@ -1,9 +1,12 @@
+import 'dart:collection';
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:Viikkokalenteri/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../assets.dart';
 
@@ -35,10 +38,7 @@ class _SymbolsViewState extends State<SymbolsView> {
           const Divider(),
           Expanded(
             child: SymbolsGrid(
-              searchTerm.isNotEmpty
-                  ? _vocabulary.search(searchTerm).map((String fileName) =>
-                      Assets.instance.getSymbolPath(fileName)!)
-                  : allSymbols,
+              searchTerm: searchTerm,
             ),
           )
         ],
@@ -48,23 +48,76 @@ class _SymbolsViewState extends State<SymbolsView> {
 }
 
 class SymbolsGrid extends StatelessWidget {
-  final Iterable<String> symbols;
-
-  const SymbolsGrid(this.symbols, {Key? key}) : super(key: key);
+  final String searchTerm;
+  const SymbolsGrid({required this.searchTerm, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final symbols = searchTerm.isNotEmpty
+        ? Vocabulary.instance
+            .search(searchTerm)
+            .map((e) => Assets.instance.getSymbolPath(e)!)
+            .toList()
+        : Assets.instance.symbolFiles.toList();
+    symbols.insertAll(0, LatestSymbols.instance.latestSymbols);
     return GridView.count(
       crossAxisCount: 4,
       children: symbols
           .map(
             (String path) => IconButton(
               icon: SvgPicture.asset(path),
-              onPressed: () => Navigator.of(context).pop<String>(path),
+              onPressed: () {
+                LatestSymbols.instance.addSymbol(path);
+                Navigator.of(context).pop<String>(path);
+              },
             ),
           )
           .toList(),
     );
+  }
+}
+
+class LatestSymbols {
+  static const maxLatestSymbols = 20;
+  static final jsonLatestSymbolsName = "latest";
+  static LatestSymbols _instance = LatestSymbols._internal();
+  static LatestSymbols get instance => _instance;
+
+  Queue<String> latestSymbols = Queue<String>();
+
+  LatestSymbols._internal();
+
+  Map<String, dynamic> toJson() {
+    return {jsonLatestSymbolsName: jsonEncode(latestSymbols.toList())};
+  }
+
+  factory LatestSymbols.fromJson(Map<String, dynamic> json) {
+    _instance.latestSymbols =
+        Queue<String>.from(jsonDecode(json[jsonLatestSymbolsName]));
+    return _instance;
+  }
+
+  void addSymbol(String fileName) {
+    if (!latestSymbols.contains(fileName)) {
+      latestSymbols.addFirst(fileName);
+      if (latestSymbols.length > maxLatestSymbols) {
+        latestSymbols.removeLast();
+      }
+      save();
+    }
+  }
+
+  static Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString("$LatestSymbols");
+    if (jsonString != null) {
+      _instance = LatestSymbols.fromJson(jsonDecode(jsonString));
+    }
+  }
+
+  static void save() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString("$LatestSymbols", jsonEncode(_instance));
   }
 }
 
