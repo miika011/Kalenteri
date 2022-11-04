@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ### This script parses html pages downloaded from synonyymit.fi
-### NOTE: some of the data is weird and has to be edited by hand e.g. 'sotilas'
+### NOTE: some of the data is weird and has to be edited by hand e.g. 'sotilas' et cetera
 
 import codecs
 import re
