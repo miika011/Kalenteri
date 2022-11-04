@@ -266,18 +266,24 @@ class _AddActivityInLandscape extends StatelessWidget {
                     child: logicController.textBox,
                   ),
                 ),
-                Column(
-                  children: [
-                    SizedBox(
-                        width: sizeForGalleryCameraButtons(context).width,
-                        height: sizeForGalleryCameraButtons(context).height,
-                        child: logicController.galleryButton),
-                    SizedBox(
-                        width: sizeForGalleryCameraButtons(context).width,
-                        height: sizeForGalleryCameraButtons(context).height,
-                        child: logicController.cameraButton)
-                  ],
-                ),
+                Row(children: [
+                  Column(
+                    children: [
+                      SizedBox(
+                          width: sizeForGalleryCameraButtons(context).width,
+                          height: sizeForGalleryCameraButtons(context).height,
+                          child: logicController.galleryButton),
+                      SizedBox(
+                          width: sizeForGalleryCameraButtons(context).width,
+                          height: sizeForGalleryCameraButtons(context).height,
+                          child: logicController.cameraButton)
+                    ],
+                  ),
+                  SizedBox(
+                      width: sizeForGalleryCameraButtons(context).width,
+                      height: sizeForGalleryCameraButtons(context).height,
+                      child: logicController.symbolsButton),
+                ]),
               ],
             ),
           ],

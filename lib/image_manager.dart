@@ -46,7 +46,8 @@ class ImageManager {
   }
 
   Map<String, dynamic> toJson() {
-    return {"_images": jsonEncode(_images)};
+    final json = {"_images": jsonEncode(_images)};
+    return json;
   }
 
   factory ImageManager.fromJson(Map<String, dynamic> json) {
@@ -182,7 +183,6 @@ class SavedImage {
 
   Map<String, dynamic> toJson() {
     final json = {"type": jsonEncode(type.index), "path": path};
-    final fromJson = SavedImage.fromJson(json);
     return json;
   }
 

@@ -50,18 +50,25 @@ class _SymbolsViewState extends State<SymbolsView> {
 class SymbolsGrid extends StatelessWidget {
   final String searchTerm;
   const SymbolsGrid({required this.searchTerm, Key? key}) : super(key: key);
+  static const minSymbolsPerRow = 4;
+  static const maxSymbolsPerRow = 8;
+  static const minSymbolsScreenWidth = 600.0;
+  static const maxSymbolsScreenWidth = 1200.0;
 
   @override
   Widget build(BuildContext context) {
-    final symbols = searchTerm.isNotEmpty
-        ? Vocabulary.instance
-            .search(searchTerm)
-            .map((e) => Assets.instance.getSymbolPath(e)!)
-            .toList()
-        : Assets.instance.symbolFiles.toList();
-    symbols.insertAll(0, LatestSymbols.instance.latestSymbols);
+    late final List<String> symbols;
+    if (searchTerm.isNotEmpty) {
+      symbols = Vocabulary.instance
+          .search(searchTerm)
+          .map((e) => Assets.instance.getSymbolPath(e)!)
+          .toList();
+    } else {
+      symbols = Assets.instance.symbolFiles.toList();
+      symbols.insertAll(0, LatestSymbols.instance.latestSymbols);
+    }
     return GridView.count(
-      crossAxisCount: 4,
+      crossAxisCount: numSymbolsPerRow(context),
       children: symbols
           .map(
             (String path) => IconButton(
@@ -74,6 +81,18 @@ class SymbolsGrid extends StatelessWidget {
           )
           .toList(),
     );
+  }
+
+  int numSymbolsPerRow(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final width = clamp(screenWidth,
+        min: minSymbolsScreenWidth, max: maxSymbolsScreenWidth);
+    final numSymbols = (minSymbolsPerRow +
+            (width - minSymbolsScreenWidth) /
+                (maxSymbolsScreenWidth - minSymbolsScreenWidth) *
+                (maxSymbolsPerRow - minSymbolsPerRow))
+        .round();
+    return numSymbols;
   }
 }
 
@@ -298,12 +317,13 @@ class _Dictionary {
             dictionaryType: type,
             matchType: _SearchMatchType.begin));
       }
-      if (word.containsCaseInsensitive(searchTerm)) {
-        results.add(_SearchResult(
-            pathsToAssets: pathToAssets,
-            dictionaryType: type,
-            matchType: _SearchMatchType.partial));
-      }
+      // Partial matches sometimes give awkward results, therefore left them out.
+      // if (word.containsCaseInsensitive(searchTerm)) {
+      //   results.add(_SearchResult(
+      //       pathsToAssets: pathToAssets,
+      //       dictionaryType: type,
+      //       matchType: _SearchMatchType.partial));
+      // }
     }
     return results;
   }
