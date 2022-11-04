@@ -36,6 +36,7 @@ class Assets {
     if (symbolFiles.contains(path)) {
       return path;
     }
+    return null;
   }
 
   Assets._internal() {}
@@ -44,6 +45,10 @@ class Assets {
 
 class IconAssets {
   const IconAssets();
+
+  String get pathToNotFound {
+    return "assets/icons/svg/not_found.svg";
+  }
 
   SvgPicture done_solid(Color color) {
     return _loadAsset("assets/icons/svg/done_solid.svg", color: color);
@@ -62,17 +67,5 @@ class IconAssets {
       assetPath,
       color: color,
     );
-  }
-}
-
-class SymbolAsset extends StatelessWidget {
-  final String name;
-  late final SvgPicture symbolPicture;
-
-  SymbolAsset({required this.name, required this.symbolPicture});
-
-  @override
-  Widget build(BuildContext context) {
-    return symbolPicture;
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'dart:math';
+import 'package:Viikkokalenteri/assets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg_provider/flutter_svg_provider.dart';
@@ -35,7 +36,11 @@ class ImageManager {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString("$ImageManager");
     if (jsonString != null) {
-      _instance = ImageManager.fromJson(jsonDecode(jsonString));
+      try {
+        _instance = ImageManager.fromJson(jsonDecode(jsonString));
+      } catch (e) {
+        return;
+      }
     }
   }
 
@@ -55,11 +60,15 @@ class ImageManager {
     final images = Map<String, SavedImage?>.fromIterable(
       savedImages.entries,
       key: (element) => element.key,
-      value: (element) => SavedImage.fromJson(element.value),
+      value: (element) {
+        try {
+          return SavedImage.fromJson(element.value);
+        } catch (e) {
+          return null;
+        }
+      },
     );
-    final ret = ImageManager._internal(images: images);
-
-    return ret;
+    return ImageManager._internal(images: images);
   }
 
   ImageManager._internal({Map<String, SavedImage?>? images})
@@ -201,6 +210,14 @@ class _ImageEncoder {
 /// Hashed image that [ImageManager] worker can resize
 /// And save quietly in the background
 class HashedImage {
+  static HashedImage get notFoundImage {
+    final hashAndPath = Assets.instance.icons.pathToNotFound;
+    return HashedImage(
+        type: ImageType.assetImage,
+        imageHash: hashAndPath,
+        temporaryFilePath: hashAndPath);
+  }
+
   String? _imageHash;
   String? _temporaryImageFilePath;
   ImageType? _imageType;
@@ -226,14 +243,14 @@ class HashedImage {
   }
 
   factory HashedImage.fromJson(Map<String, dynamic> json) {
-    final hash = json["imageHash"];
-    final tempPath = json["temporaryPath"];
-    final type = ImageType.values[jsonDecode(json["imageType"])];
-    final ret = HashedImage(
-        imageHash: json["imageHash"],
-        temporaryFilePath: json["temporaryPath"],
-        type: jsonDecode(json["imageType"]));
-    return ret;
+    try {
+      return HashedImage(
+          imageHash: json["imageHash"],
+          temporaryFilePath: json["temporaryPath"],
+          type: jsonDecode(json["imageType"]));
+    } catch (e) {
+      return HashedImage.notFoundImage;
+    }
   }
 
   @override

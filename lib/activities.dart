@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:Viikkokalenteri/assets.dart';
 import 'package:Viikkokalenteri/image_manager.dart';
 import 'package:Viikkokalenteri/util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -101,16 +102,27 @@ class LogBook {
     final Map<Date, List<Activity>> activities = {};
     for (final entry in json["_activities"].entries) {
       final dateJson = jsonDecode(entry.key);
-      final date = Date.fromJson(dateJson);
+      Date? date;
+      try {
+        date = Date.fromJson(dateJson);
+      } catch (e) {
+        continue;
+      }
       final List<Activity> activitiesForDay = [];
       for (final activityJson in entry.value) {
-        final activity = Activity.fromJson(activityJson);
-        if (activity.text.isNotEmpty ||
-            activity.hashedImage?.imageHash != null) {
+        Activity? activity;
+        try {
+          activity = Activity.fromJson(activityJson);
+        } catch (e) {
+          activity = null;
+        }
+        if (activity != null &&
+            (activity.text.isNotEmpty ||
+                activity.hashedImage?.imageHash != null)) {
           activitiesForDay.add(activity);
         }
       }
-      activities[date] = activitiesForDay;
+      activities[date!] = activitiesForDay;
     }
     return LogBook._internal(activities);
   }

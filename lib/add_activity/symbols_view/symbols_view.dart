@@ -23,7 +23,8 @@ class _SymbolsViewState extends State<SymbolsView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(
+        child: Scaffold(
       body: Column(
         children: [
           SymbolSearchBar(
@@ -41,7 +42,7 @@ class _SymbolsViewState extends State<SymbolsView> {
           )
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -124,8 +125,10 @@ class LatestSymbols {
   }
 
   factory LatestSymbols.fromJson(Map<String, dynamic> json) {
-    _instance.latestSymbols =
-        Queue<String>.from(jsonDecode(json[jsonLatestSymbolsName]));
+    try {
+      _instance.latestSymbols =
+          Queue<String>.from(jsonDecode(json[jsonLatestSymbolsName]));
+    } catch (e) {}
     return _instance;
   }
 
