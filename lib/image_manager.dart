@@ -265,14 +265,14 @@ class HashedImage {
   ///but this required less rewriting for now.
   ImageProvider? get imageProvider {
     final path = _imagePath;
-    if (path == null) {
-      return null;
-    }
-    if (_imageType == ImageType.storageImage) {
-      return FileImage(File(path));
-    } else if (_imageType == ImageType.assetImage) {
-      return Svg(path);
-    }
+    if (path == null) return null;
+    try {
+      if (_imageType == ImageType.storageImage) {
+        return FileImage(File(path));
+      } else if (_imageType == ImageType.assetImage) {
+        return Svg(path);
+      }
+    } catch (e) {}
     return null;
   }
 }

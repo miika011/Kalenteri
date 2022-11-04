@@ -33,10 +33,13 @@ class Activity {
     final date = json["date"];
     final label = json["label"];
     final imageHash = json["imageHash"];
+    final hashedImage =
+        imageHash != null ? ImageManager.instance.getImage(imageHash) : null;
     final ret = Activity(
-        date: Date.fromJson(date),
-        text: label,
-        hashedImage: ImageManager.instance.getImage(imageHash));
+      date: Date.fromJson(date),
+      text: label,
+      hashedImage: hashedImage,
+    );
     return ret;
   }
 

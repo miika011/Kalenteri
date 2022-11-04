@@ -18,13 +18,11 @@ class SymbolsView extends StatefulWidget {
 }
 
 class _SymbolsViewState extends State<SymbolsView> {
-  final _vocabulary = Vocabulary._instance;
   List<String> get allSymbols => Assets.instance.symbolFiles;
   String searchTerm = "";
 
   @override
   Widget build(BuildContext context) {
-    final results = Vocabulary.instance.search("sotilas");
     return Scaffold(
       body: Column(
         children: [
@@ -57,30 +55,45 @@ class SymbolsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    late final List<String> symbols;
-    if (searchTerm.isNotEmpty) {
-      symbols = Vocabulary.instance
-          .search(searchTerm)
-          .map((e) => Assets.instance.getSymbolPath(e)!)
-          .toList();
-    } else {
-      symbols = Assets.instance.symbolFiles.toList();
-      symbols.insertAll(0, LatestSymbols.instance.latestSymbols);
-    }
     return GridView.count(
       crossAxisCount: numSymbolsPerRow(context),
-      children: symbols
-          .map(
-            (String path) => IconButton(
-              icon: SvgPicture.asset(path),
-              onPressed: () {
-                LatestSymbols.instance.addSymbol(path);
-                Navigator.of(context).pop<String>(path);
-              },
-            ),
-          )
-          .toList(),
+      children: buildSymbols(context),
     );
+  }
+
+  List<Widget> buildSymbols(BuildContext context) {
+    late final List<Widget> symbols;
+
+    final symbolPaths = searchTerm.isNotEmpty
+        ? Vocabulary.instance
+            .search(searchTerm)
+            .map((e) => Assets.instance.getSymbolPath(e)!)
+            .toList()
+        : LatestSymbols.instance.latestSymbols
+            .followedBy(Assets.instance.symbolFiles)
+            .toList();
+
+    symbols = getSymbolsErrorSafe(symbolPaths: symbolPaths, context: context);
+    return symbols;
+  }
+
+  List<Widget> getSymbolsErrorSafe(
+      {required List<String> symbolPaths, required BuildContext context}) {
+    return symbolPaths
+        .map((path) {
+          try {
+            return IconButton(
+                onPressed: () {
+                  LatestSymbols.instance.addSymbol(path);
+                  Navigator.of(context).pop<String>(path);
+                },
+                icon: SvgPicture.asset(path));
+          } catch (e) {
+            return null;
+          }
+        })
+        .whereType<Widget>()
+        .toList();
   }
 
   int numSymbolsPerRow(BuildContext context) {
