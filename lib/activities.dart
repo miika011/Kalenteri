@@ -83,6 +83,7 @@ class LogBook {
     if (index < activities.length) {
       activities.removeAt(index);
     }
+    save();
   }
 
   ///Throws on invalid index
