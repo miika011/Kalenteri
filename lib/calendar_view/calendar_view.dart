@@ -32,22 +32,13 @@ class WeekWidget extends StatefulWidget {
 class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
   bool _isAddingActivities = false;
   ActivityDragStatus? activityDragStatus;
+  final scrollkey = GlobalKey();
   late final ScrollController _scrollController;
-  double get _floatingAddButtonOpacity {
-    final int daysToSunday =
-        widget.dayInTheWeek.weekDayEnum.daysTo(Weekday.sun);
-    final Date sundayOfTheWeek = Date.fromDateTime(DateTime(
-        widget.dayInTheWeek.year,
-        widget.dayInTheWeek.month,
-        widget.dayInTheWeek.day + daysToSunday));
-    return LogBook().activitiesForDate(sundayOfTheWeek).length >=
-            layout.minActivitiesPerScreen
-        ? 0.8
-        : 1.0;
-  }
 
   bool get isDraggingActivity => activityDragStatus != null;
-  void stopDragging() => activityDragStatus = null;
+  void stopDragging() {
+    activityDragStatus = null;
+  }
 
   bool _doesAddButtonSurroundDraggedActivity(
       {required int addButtonIndex, required Date addButtonDate}) {
@@ -85,19 +76,16 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
       body: SafeArea(
         child: buildWeekView(context),
       ),
-      floatingActionButton: Opacity(
-        opacity: _floatingAddButtonOpacity,
-        child: SizedBox(
-          height: layout.floatingAddButtonWidthAndHeight(context),
-          width: layout.floatingAddButtonWidthAndHeight(context),
-          child: FloatingAddButton(
-            iconSize: layout.floatingAddButtonIconSize(context),
-            vsync: this,
-            onPressed: () => setState(
-              () {
-                _isAddingActivities = !_isAddingActivities;
-              },
-            ),
+      floatingActionButton: SizedBox(
+        height: layout.floatingActionButtonWidthAndHeight(context),
+        width: layout.floatingActionButtonWidthAndHeight(context),
+        child: FloatingAddButton(
+          iconSize: layout.floatingActionButtonIconSize(context),
+          vsync: this,
+          onPressed: () => setState(
+            () {
+              _isAddingActivities = !_isAddingActivities;
+            },
           ),
         ),
       ),
@@ -169,12 +157,12 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
         So we get a nice, rectangular grid
     */
 
-    List<List<Widget>> gridRows =
+    final List<List<Widget>> gridRows =
         generateGridRows(dayInTheWeek, context: context);
 
     return Scrollbar(
       controller: _scrollController,
-      //key: ValueKey(dayInTheWeek),
+      key: scrollkey,
       child: ListView.builder(
         controller: _scrollController,
         //physics: const BouncingScrollPhysics(),
@@ -182,13 +170,7 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
         itemBuilder: ((context, index) {
           return AnimatedContainer(
             width: MediaQuery.of(context).size.width,
-            height: index.isEven
-                ? (_isAddingActivities
-                    ? layout.addButtonEnabledHeight(context)
-                    : layout.addButtonDisabledHeight(context))
-                : (_isAddingActivities
-                    ? layout.activityHeightWhenAdding(context)
-                    : layout.activityHeight(context)),
+            height: _rowHeight(context: context, rowIndex: index),
             duration: WeekWidget.addActivityTransitionDuration,
             curve: WeekWidget.addActivityTransitionCurve,
             child: Row(
@@ -198,6 +180,19 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
         }),
       ),
     );
+  }
+
+  double _rowHeight({required BuildContext context, required int rowIndex}) {
+    if (isDraggingActivity) {
+      return layout.activityHeightWhenAdding(context);
+    }
+    return rowIndex.isEven
+        ? (_isAddingActivities
+            ? layout.addButtonEnabledHeight(context)
+            : layout.addButtonDisabledHeight(context))
+        : (_isAddingActivities
+            ? layout.activityHeightWhenAdding(context)
+            : layout.activityHeight(context));
   }
 
   List<List<Widget>> generateGridRows(Date dayInTheWeek,
@@ -219,44 +214,55 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
       }
       gridRows.add(row);
     }
+
+    final List<Widget> trailingEmptyRow = [];
+    for (Date date in MondayToSunday(dayInTheWeek)) {
+      trailingEmptyRow.add(Expanded(child: generateActivityWidget(date: date)));
+    }
+    gridRows.add(trailingEmptyRow);
     return gridRows;
   }
 
-  Widget generateActivityWidget({required Date date, required int index}) {
+  Widget generateActivityWidget({required Date date, int? index}) {
     final activitiesForDay = LogBook().activitiesForDate(date);
     final width = MediaQuery.of(context).size.width / DateTime.daysPerWeek;
     Widget content;
-    if (index < activitiesForDay.length) {
-      final activity = activitiesForDay[index];
-
+    final Activity? activity = index == null
+        ? Activity(date: date)
+        : index < activitiesForDay.length
+            ? activitiesForDay[index]
+            : null;
+    if (activity != null) {
       content = GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () {
-          if (_isAddingActivities) {
+          if (index != null) {
             openActivityDetailsDialog(activity, index);
           }
         },
         child: _isAddingActivities
             ? DraggedActivity(
                 scrollController: _scrollController,
-                draggingKey: widget.draggedKey,
                 activity: activity,
                 onDragCompleted: () {
-                  // showSnack(context, "Drag complete");
                   setState(() {
+                    if (!mounted) return;
+                    final dateHoveredOver = activityDragStatus!.hoveredOnDate;
+                    final draggedActivityDate =
+                        activityDragStatus!.draggedActivity.date;
+                    final indexHoveredOver = activityDragStatus!.hoveredOnIndex;
                     LogBook().deleteActivity(
-                        date: activityDragStatus!.draggedActivity.date,
+                        date: draggedActivityDate,
                         index: activityDragStatus!.draggedActivityIndex);
 
-                    final addIndex = activityDragStatus!.draggedActivity.date !=
-                                activityDragStatus!.hoveredOnDate ||
-                            activityDragStatus!.hoveredOnIndex < index
-                        ? activityDragStatus!.hoveredOnIndex
-                        : activityDragStatus!.hoveredOnIndex - 1;
+                    final addIndex = draggedActivityDate != dateHoveredOver ||
+                            indexHoveredOver < index!
+                        ? indexHoveredOver
+                        : indexHoveredOver - 1;
 
                     LogBook().addActivity(
                         activity: Activity(
-                            date: activityDragStatus!.hoveredOnDate,
+                            date: dateHoveredOver,
                             hashedImage: activity.hashedImage,
                             text: activity.text),
                         index: addIndex);
@@ -265,8 +271,6 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
                   });
                 },
                 onDragEnd: (details) {
-                  // showSnack(context, "Drag end");
-
                   if (!details.wasAccepted) {
                     setState(() {
                       stopDragging();
@@ -274,17 +278,15 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
                   }
                 },
                 onDragStarted: () {
-                  // showSnack(context, "Drag started");
                   setState(() {
                     activityDragStatus = ActivityDragStatus(
-                        draggedActivityIndex: index,
+                        draggedActivityIndex: index!,
                         draggedActivity: activity,
                         hoveredOnDate: activity.date,
                         hoveredOnIndex: index);
                   });
                 },
                 onDraggableCanceled: (velocity, offset) {
-                  // showSnack(context, "Drag canceled");
                   setState(() {
                     stopDragging();
                   });
@@ -297,21 +299,7 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
             : ActivityWidget(activity),
       );
     } else {
-      final blankActivity = ActivityWidget(Activity(date: date));
-      content = ((isDraggingActivity && index <= activitiesForDay.length) &&
-              activityDragStatus!.draggedActivity.date != date)
-          ? dragTarget(
-              index: index,
-              date: date,
-              child: AnimatedOverlayColor(
-                duration: WeekWidget.highlightAnimationDuration,
-                color1: WeekWidget.highlightColor1,
-                color2: WeekWidget.highlightColor2,
-                vsync: this,
-                child: blankActivity,
-              ),
-            )
-          : blankActivity;
+      content = ActivityWidget.blankActivity(date);
     }
 
     return Container(
@@ -348,7 +336,8 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
         onPressed: () => onPressedAddActivity(date: date, index: index),
         layout: layout,
       );
-      final child = dragTarget(index: index, date: date, child: addButton);
+      final child =
+          dragTargetAddButton(index: index, date: date, child: addButton);
       return isDraggingActivity &&
               !(_doesAddButtonSurroundDraggedActivity(
                   addButtonDate: date, addButtonIndex: index))
@@ -372,9 +361,13 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
     }
   }
 
-  DragTarget<Activity> dragTarget(
-      {required int index, required Date date, required Widget child}) {
+  DragTarget<Activity> dragTargetAddButton(
+      {required int index,
+      required Date date,
+      required AddActivityButton child}) {
     return DragTarget<Activity>(
+      onWillAccept: ((data) => !_doesAddButtonSurroundDraggedActivity(
+          addButtonIndex: index, addButtonDate: date)),
       onMove: (details) {
         if (!isDraggingActivity) return;
         setState(
@@ -527,6 +520,10 @@ class DayHeaderWidget extends StatelessWidget {
 }
 
 class ActivityWidget extends StatelessWidget {
+  static ActivityWidget blankActivity(Date date) {
+    return ActivityWidget(Activity(date: date));
+  }
+
   const ActivityWidget(this.activity, {Key? key}) : super(key: key);
 
   @override
@@ -583,7 +580,6 @@ class ActivityWidget extends StatelessWidget {
 class DraggedActivity extends StatefulWidget {
   const DraggedActivity(
       {Key? key,
-      required this.draggingKey,
       required this.activity,
       required this.onDragCompleted,
       required this.onDragEnd,
@@ -593,7 +589,6 @@ class DraggedActivity extends StatefulWidget {
       required this.scrollController})
       : super(key: key);
 
-  final GlobalKey draggingKey;
   final Activity activity;
   final Size sizeWhenDragged;
   final VoidCallback onDragCompleted;
@@ -609,13 +604,16 @@ class DraggedActivity extends StatefulWidget {
 }
 
 class _DraggedActivityState extends State<DraggedActivity>
-    with SingleTickerProviderStateMixin {
+    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   bool _isScrolling = false;
   _Direction _scrollDirection = _Direction.down;
   late final Ticker _ticker;
   static const scrollDeltaY = 10.0;
 
   void startScrolling(_Direction direction) {
+    if (!mounted || _isScrolling) {
+      return;
+    }
     setState(() {
       _isScrolling = true;
       _scrollDirection = direction;
@@ -623,6 +621,7 @@ class _DraggedActivityState extends State<DraggedActivity>
   }
 
   void stopScrolling() {
+    if (!mounted || _isScrolling == false) return;
     setState(() {
       _isScrolling = false;
     });
@@ -632,14 +631,16 @@ class _DraggedActivityState extends State<DraggedActivity>
   void initState() {
     super.initState();
     _ticker = createTicker((elapsed) {
+      if (!mounted) {
+        return;
+      }
       if (_isScrolling) {
         final delta =
             _scrollDirection == _Direction.down ? scrollDeltaY : -scrollDeltaY;
+        final jumpLocation = widget.scrollController.offset + delta;
         setState(() {
-          widget.scrollController.jumpTo(clamp(
-              widget.scrollController.offset + delta,
-              min: 0.0,
-              max: widget.scrollController.position.maxScrollExtent));
+          widget.scrollController.jumpTo(clamp(jumpLocation,
+              min: 0.0, max: widget.scrollController.position.maxScrollExtent));
         });
       }
     });
@@ -667,10 +668,19 @@ class _DraggedActivityState extends State<DraggedActivity>
           stopScrolling();
         }
       },
-      onDragCompleted: widget.onDragCompleted,
-      onDragEnd: widget.onDragEnd,
+      onDragCompleted: () {
+        stopScrolling();
+        widget.onDragCompleted();
+      },
+      onDragEnd: (details) {
+        stopScrolling();
+        widget.onDragEnd(details);
+      },
       onDragStarted: widget.onDragStarted,
-      onDraggableCanceled: widget.onDraggableCanceled,
+      onDraggableCanceled: (velocity, offset) {
+        stopScrolling();
+        widget.onDraggableCanceled(velocity, offset);
+      },
       maxSimultaneousDrags: 1,
       childWhenDragging: Container(),
       data: widget.activity,
@@ -681,7 +691,6 @@ class _DraggedActivityState extends State<DraggedActivity>
           translation: const Offset(-0.5, -0.5),
           child: ActivityWidget(
             widget.activity,
-            key: widget.draggingKey,
           ),
         ),
       ),
@@ -691,15 +700,8 @@ class _DraggedActivityState extends State<DraggedActivity>
     );
   }
 
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Expanded(
-  //     child: FractionalTranslation(
-  //       translation: const Offset(-0.5, -0.5),
-  //       child: ActivityWidget(activity),
-  //     ),
-  //   );
-  // }
+  @override
+  bool get wantKeepAlive => true;
 }
 
 enum _Direction { up, down }
@@ -753,7 +755,7 @@ abstract class Layout {
   int get minActivitiesPerScreen;
   int get maxActivitiesPerScreen;
 
-  double floatingAddButtonIconSize(BuildContext context);
+  double floatingActionButtonIconSize(BuildContext context);
 
   Decoration headerDecoration(Date date) {
     final bgColor = backgroundColorForHeader(date);
@@ -776,8 +778,8 @@ abstract class Layout {
     return availableHeight / numActivitiesVertically;
   }
 
-  double floatingAddButtonWidthAndHeight(BuildContext context) {
-    final ret = activityHeight(context) * 0.5;
+  double floatingActionButtonWidthAndHeight(BuildContext context) {
+    final ret = activityHeight(context) * 0.7;
     return ret;
   }
 
@@ -878,9 +880,9 @@ class LayoutForLandscape extends Layout {
   }
 
   @override
-  double floatingAddButtonIconSize(BuildContext context) {
+  double floatingActionButtonIconSize(BuildContext context) {
     return pixelsToFontSizeEstimate(
-        floatingAddButtonWidthAndHeight(context) * 0.5);
+        floatingActionButtonWidthAndHeight(context) * 0.5);
   }
 }
 
@@ -921,9 +923,9 @@ class LayoutForPortrait extends Layout {
   }
 
   @override
-  double floatingAddButtonIconSize(BuildContext context) {
+  double floatingActionButtonIconSize(BuildContext context) {
     return pixelsToFontSizeEstimate(
-        floatingAddButtonWidthAndHeight(context) * 0.4);
+        floatingActionButtonWidthAndHeight(context) * 0.4);
   }
 
   @override

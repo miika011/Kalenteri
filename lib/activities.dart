@@ -74,7 +74,7 @@ class LogBook {
 
   void addActivity({required Activity activity, required int index}) {
     final activitiesForDay = _getModifiableListOfActivities(activity.date);
-    index = min(index, activitiesForDay.length);
+    index = clamp(index, min: 0, max: activitiesForDay.length);
     activitiesForDay.insert(index, activity);
     save();
   }
@@ -122,7 +122,7 @@ class LogBook {
           activitiesForDay.add(activity);
         }
       }
-      activities[date!] = activitiesForDay;
+      activities[date] = activitiesForDay;
     }
     return LogBook._internal(activities);
   }

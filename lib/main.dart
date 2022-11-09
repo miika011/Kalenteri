@@ -37,7 +37,7 @@ class AppHome extends StatefulWidget {
 }
 
 class _AppHomeState extends State<AppHome> {
-  late final WeekPageController pageController;
+  final WeekPageController pageController = WeekPageController();
 
   ThemeData get themeData => Theme.of(context).copyWith(
         scrollbarTheme: ScrollbarThemeData(
@@ -67,7 +67,6 @@ class _AppHomeState extends State<AppHome> {
   @override
   void initState() {
     super.initState();
-    pageController = WeekPageController();
   }
 
   @override

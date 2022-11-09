@@ -81,8 +81,11 @@ class _AcceptButtonState extends State<AcceptButton> {
 enum AcceptButtonStatus { disabled, acceptText, acceptAndReturn }
 
 class ActivityImageDisplay extends StatefulWidget {
+  final VoidCallback onImageRemoved;
   final Activity? oldActivity;
-  const ActivityImageDisplay({Key? key, this.oldActivity}) : super(key: key);
+  const ActivityImageDisplay(
+      {Key? key, this.oldActivity, required this.onImageRemoved})
+      : super(key: key);
 
   @override
   State<ActivityImageDisplay> createState() => _ActivityImageDisplayState();
@@ -93,11 +96,27 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      borderRadius: BorderRadius.circular(15),
-      elevation: 10,
-      child: imageWidget(),
-    );
+    return Stack(children: [
+      SizedBox(
+        width: MediaQuery.of(context).size.width,
+        child: Material(
+          borderRadius: BorderRadius.circular(15),
+          elevation: 10,
+          child: imageWidget(),
+        ),
+      ),
+      Align(
+        alignment: Alignment.bottomRight,
+        child: RemoveImageButton(
+          onPressed: hasImage
+              ? () {
+                  removeImage();
+                  widget.onImageRemoved();
+                }
+              : null,
+        ),
+      )
+    ]);
   }
 
   BoxDecoration decoration(BuildContext context) {
@@ -132,6 +151,8 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
     );
   }
 
+  bool get hasImage => _hashedImage != null;
+
   /// Updates the image and returns a future to a new hash id.
   void setImage({required String imagePath, required ImageType imageType}) {
     setState(() {
@@ -143,6 +164,31 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
         _hashedImage = ImageManager.instance.storeAsset(imagePath);
       }
     });
+  }
+
+  void removeImage() {
+    setState(() {
+      _hashedImage = null;
+    });
+  }
+}
+
+class RemoveImageButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+
+  const RemoveImageButton({Key? key, required this.onPressed})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(
+        Icons.block,
+        color: onPressed != null ? Colors.red : Colors.grey,
+        size: pixelsToFontSizeEstimate(48),
+      ),
+    );
   }
 }
 
@@ -267,9 +313,11 @@ class _ActivityTextBoxState extends State<ActivityTextBox> {
         textController.text = newValue;
       });
   void unFocus() {
-    setState(() {
-      focusNode.unfocus();
-    });
+    setState(
+      () {
+        focusNode.unfocus();
+      },
+    );
   }
 }
 
@@ -291,6 +339,11 @@ class AddActivityController {
       CancelButton(onPressed: onPressedCancel);
 
   late final ActivityImageDisplay imageDisplay = ActivityImageDisplay(
+    onImageRemoved: () {
+      _acceptButtonKey.currentState?.buttonStatus = hasText
+          ? AcceptButtonStatus.acceptAndReturn
+          : AcceptButtonStatus.disabled;
+    },
     key: _imageDisplayKey,
     oldActivity: oldActivity,
   );
