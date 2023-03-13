@@ -107,14 +107,12 @@ class _ActivityImageDisplayState extends State<ActivityImageDisplay> {
       ),
       Align(
         alignment: Alignment.bottomRight,
-        child: RemoveImageButton(
-          onPressed: hasImage
-              ? () {
-                  removeImage();
-                  widget.onImageRemoved();
-                }
-              : null,
-        ),
+        child: hasImage
+            ? RemoveImageButton(onPressed: () {
+                removeImage();
+                widget.onImageRemoved();
+              })
+            : Container(),
       )
     ]);
   }

@@ -30,7 +30,6 @@ class WeekWidget extends StatefulWidget {
 }
 
 class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
-  bool _isAddingActivities = false;
   ActivityDragStatus? activityDragStatus;
   final scrollkey = GlobalKey();
   late final ScrollController _scrollController;
@@ -75,19 +74,6 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
     return Scaffold(
       body: SafeArea(
         child: buildWeekView(context),
-      ),
-      floatingActionButton: SizedBox(
-        height: layout.floatingActionButtonWidthAndHeight(context),
-        width: layout.floatingActionButtonWidthAndHeight(context),
-        child: FloatingAddButton(
-          iconSize: layout.floatingActionButtonIconSize(context),
-          vsync: this,
-          onPressed: () => setState(
-            () {
-              _isAddingActivities = !_isAddingActivities;
-            },
-          ),
-        ),
       ),
     );
   }
@@ -183,16 +169,11 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
   }
 
   double _rowHeight({required BuildContext context, required int rowIndex}) {
-    if (isDraggingActivity) {
-      return layout.activityHeightWhenAdding(context);
+    if (rowIndex.isEven) {
+      return layout.addButtonHeight(context);
+    } else {
+      return layout.activityHeight(context);
     }
-    return rowIndex.isEven
-        ? (_isAddingActivities
-            ? layout.addButtonEnabledHeight(context)
-            : layout.addButtonDisabledHeight(context))
-        : (_isAddingActivities
-            ? layout.activityHeightWhenAdding(context)
-            : layout.activityHeight(context));
   }
 
   List<List<Widget>> generateGridRows(Date dayInTheWeek,
@@ -215,11 +196,6 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
       gridRows.add(row);
     }
 
-    final List<Widget> trailingEmptyRow = [];
-    for (Date date in MondayToSunday(dayInTheWeek)) {
-      trailingEmptyRow.add(Expanded(child: generateActivityWidget(date: date)));
-    }
-    gridRows.add(trailingEmptyRow);
     return gridRows;
   }
 
@@ -234,70 +210,67 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
             : null;
     if (activity != null) {
       content = GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () {
-          if (index != null) {
-            openActivityDetailsDialog(activity, index);
-          }
-        },
-        child: _isAddingActivities
-            ? DraggedActivity(
-                scrollController: _scrollController,
-                activity: activity,
-                onDragCompleted: () {
-                  setState(() {
-                    if (!mounted) return;
-                    final dateHoveredOver = activityDragStatus!.hoveredOnDate;
-                    final draggedActivityDate =
-                        activityDragStatus!.draggedActivity.date;
-                    final indexHoveredOver = activityDragStatus!.hoveredOnIndex;
-                    LogBook().deleteActivity(
-                        date: draggedActivityDate,
-                        index: activityDragStatus!.draggedActivityIndex);
+          behavior: HitTestBehavior.translucent,
+          onTap: () {
+            if (index != null) {
+              openActivityDetailsDialog(activity, index);
+            }
+          },
+          child: DraggableActivity(
+              scrollController: _scrollController,
+              activity: activity,
+              onDragCompleted: () {
+                setState(() {
+                  if (!mounted) return;
+                  final dateHoveredOver = activityDragStatus!.hoveredOnDate;
+                  final draggedActivityDate =
+                      activityDragStatus!.draggedActivity.date;
+                  final indexHoveredOver = activityDragStatus!.hoveredOnIndex;
+                  LogBook().deleteActivity(
+                      date: draggedActivityDate,
+                      index: activityDragStatus!.draggedActivityIndex);
 
-                    final addIndex = draggedActivityDate != dateHoveredOver ||
-                            indexHoveredOver < index!
-                        ? indexHoveredOver
-                        : indexHoveredOver - 1;
+                  final addIndex = draggedActivityDate != dateHoveredOver ||
+                          indexHoveredOver < index!
+                      ? indexHoveredOver
+                      : indexHoveredOver - 1;
 
-                    LogBook().addActivity(
-                        activity: Activity(
-                            date: dateHoveredOver,
-                            hashedImage: activity.hashedImage,
-                            text: activity.text),
-                        index: addIndex);
+                  LogBook().addActivity(
+                      activity: Activity(
+                          date: dateHoveredOver,
+                          hashedImage: activity.hashedImage,
+                          text: activity.text),
+                      index: addIndex);
 
-                    stopDragging();
-                  });
-                },
-                onDragEnd: (details) {
-                  if (!details.wasAccepted) {
-                    setState(() {
-                      stopDragging();
-                    });
-                  }
-                },
-                onDragStarted: () {
-                  setState(() {
-                    activityDragStatus = ActivityDragStatus(
-                        draggedActivityIndex: index!,
-                        draggedActivity: activity,
-                        hoveredOnDate: activity.date,
-                        hoveredOnIndex: index);
-                  });
-                },
-                onDraggableCanceled: (velocity, offset) {
+                  stopDragging();
+                });
+              },
+              onDragEnd: (details) {
+                if (!details.wasAccepted) {
                   setState(() {
                     stopDragging();
                   });
-                },
-                sizeWhenDragged: Size(
-                    MediaQuery.of(context).size.width /
-                        DateTime.daysPerWeek *
-                        0.75,
-                    layout.activityHeight(context) * 0.75))
-            : ActivityWidget(activity),
-      );
+                }
+              },
+              onDragStarted: () {
+                setState(() {
+                  activityDragStatus = ActivityDragStatus(
+                      draggedActivityIndex: index!,
+                      draggedActivity: activity,
+                      hoveredOnDate: activity.date,
+                      hoveredOnIndex: index);
+                });
+              },
+              onDraggableCanceled: (velocity, offset) {
+                setState(() {
+                  stopDragging();
+                });
+              },
+              sizeWhenDragged: Size(
+                  MediaQuery.of(context).size.width /
+                      DateTime.daysPerWeek *
+                      0.75,
+                  layout.activityHeight(context) * 0.75)));
     } else {
       content = ActivityWidget.blankActivity(date);
     }
@@ -330,8 +303,7 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
   }
 
   Widget generateAddActivityButton({required Date date, required int index}) {
-    if (_isAddingActivities &&
-        index <= LogBook().activitiesForDate(date).length) {
+    if (index <= LogBook().activitiesForDate(date).length) {
       final addButton = AddActivityButton(
         onPressed: () => onPressedAddActivity(date: date, index: index),
         layout: layout,
@@ -577,8 +549,8 @@ class ActivityWidget extends StatelessWidget {
   final Activity activity;
 }
 
-class DraggedActivity extends StatefulWidget {
-  const DraggedActivity(
+class DraggableActivity extends StatefulWidget {
+  const DraggableActivity(
       {Key? key,
       required this.activity,
       required this.onDragCompleted,
@@ -599,11 +571,11 @@ class DraggedActivity extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() {
-    return _DraggedActivityState();
+    return _DraggableActivityState();
   }
 }
 
-class _DraggedActivityState extends State<DraggedActivity>
+class _DraggableActivityState extends State<DraggableActivity>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   bool _isScrolling = false;
   _Direction _scrollDirection = _Direction.down;
@@ -749,8 +721,7 @@ class AddActivityButton extends StatelessWidget {
 
 abstract class Layout {
   double addButtonIconSize(BuildContext context);
-  double addButtonEnabledHeight(BuildContext context);
-  double addButtonDisabledHeight(BuildContext context);
+  double addButtonHeight(BuildContext context);
   double headerHeight(BuildContext context);
   int get minActivitiesPerScreen;
   int get maxActivitiesPerScreen;
@@ -797,8 +768,7 @@ abstract class Layout {
   }
 
   double activityHeightWhenAdding(BuildContext context) {
-    return activityHeight(context) +
-        (addButtonDisabledHeight(context) - addButtonEnabledHeight(context));
+    return activityHeight(context) + (addButtonHeight(context));
   }
 
   Decoration activityDecoration(Date date) {
@@ -865,18 +835,13 @@ class LayoutForLandscape extends Layout {
   int get maxActivitiesPerScreen => 6;
 
   @override
-  double addButtonEnabledHeight(BuildContext context) {
-    return addButtonDisabledHeight(context) * 4;
-  }
-
-  @override
-  double addButtonDisabledHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.015;
+  double addButtonHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.07;
   }
 
   @override
   double addButtonIconSize(BuildContext context) {
-    return addButtonDisabledHeight(context) * 4.0;
+    return addButtonHeight(context);
   }
 
   @override
@@ -908,18 +873,13 @@ class LayoutForPortrait extends Layout {
   }
 
   @override
-  double addButtonEnabledHeight(BuildContext context) {
-    return addButtonDisabledHeight(context) * 6;
-  }
-
-  @override
-  double addButtonDisabledHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height * 0.005;
+  double addButtonHeight(BuildContext context) {
+    return MediaQuery.of(context).size.height * 0.03;
   }
 
   @override
   double addButtonIconSize(BuildContext context) {
-    return addButtonDisabledHeight(context) * 5.0;
+    return addButtonHeight(context);
   }
 
   @override
