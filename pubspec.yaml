@@ -29,15 +29,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  image_picker:
-  image:
-  path_provider:
-  gallery_saver:
-  shared_preferences:
-  flutter_svg:
-  flutter_svg_provider:
-  crypto:
-  permission_handler:
+  image_picker: ^0.8.7
+  image: ^3.2.0
+  path_provider: ^2.0.13
+  gallery_saver: ^2.3.2
+  shared_preferences: ^2.0.18
+  flutter_svg: ^1.1.6
+  flutter_svg_provider: ^1.0.3
+  crypto: ^3.0.2
+  permission_handler: ^10.2.0
   
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

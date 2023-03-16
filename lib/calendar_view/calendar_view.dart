@@ -328,7 +328,7 @@ class _WeekWidgetState extends State<WeekWidget> with TickerProviderStateMixin {
           : child;
     } else {
       return Container(
-        decoration: layout.addButtonDecoration,
+        decoration: layout.activityDecoration(date),
       );
     }
   }
@@ -779,7 +779,9 @@ abstract class Layout {
   BoxDecoration tileDecoration(Color bgColor) {
     return BoxDecoration(
       color: bgColor,
-      border: Border.all(color: bgColor.factorBy(WeekWidget.borderShadeFactor)),
+      border: Border.symmetric(
+          vertical: BorderSide(
+              color: bgColor.factorBy(WeekWidget.borderShadeFactor))),
     );
   }
 
